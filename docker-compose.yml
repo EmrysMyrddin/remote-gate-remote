@@ -1,0 +1,17 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    ports:
+      - 8080:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gate
+    volumes:
+      - ./data:/var/lib/postgresql/data
+  gate:
+    build: .
+    ports:
+      - 8081:80
+    image: wood-wood-gate
