@@ -8,14 +8,36 @@
 
 #include <WiFiClientSecure.h>
 #include <WiFiClient.h>
+#include "config.h"
 
+#ifndef GATE_SECRET
+#define GATE_SECRET "dev_gate_secret"
+#endif
+
+/*
 const char* ssid = "";
 const char* password = "";
+/*/
+const char* ssid = "";
+const char* password = "";
+//*/
 
-const bool secured = false;
+/*
+#define SECURED
+const char* server = "woody-wood-gate.caprover.cocaud.dev";
+const int port = 443;
+/*/
 const char* server = "192.168.1.22";
 const int port = 8081;
+//*/
+
 const char* path = "/gate";
+
+#ifdef SECURED
+const char* protocol = "https";
+#else
+const char* protocol = "http";
+#endif
 
 const uint8_t outPin = 13;
 
@@ -69,35 +91,41 @@ void setup() {
   while (true) {
     connectToWiFi();
 
-    WiFiClient client = secured ? getSecureClient() : getInsecureClient();
+#ifdef SECURED
+    WiFiClientSecure client;
+    client.setCACert(lets_encrypt_root_ca);
+#else
+    WiFiClient client;
+#endif
 
     while (WiFi.status() == WL_CONNECTED) {
       if (!client.connect(server, port)) {
         Serial.println("Connection failed! Retrying in 1s.");
-        delay(1000);
+        delay(5000);
         continue;
       }
 
       char url[512];
-      sprintf(url, "%s://%s:%d%s", secured ? "https" : "http", server, port, path);
+      sprintf(url, "%s://%s:%d%s", protocol, server, port, path);
 
       Serial.printf("\nWaiting for open request: %s\n", url);
       client.printf(
         "GET %s HTTP/1.0\n"
         "Host: %s:%d\n"
         "Connection: close\n"
+        "Authorization: %s\n"
         "\n",
-        url, server, port
+        url, server, port, GATE_SECRET
       );
 
       int status = 0;
       while (client.connected()) {
         Serial.print(".");
         String line = client.readStringUntil('\n');
-        if (line != "") {
-          Serial.printf("Header received: %s\n", line);
+        if (line.startsWith("HTTP")) {
           status = (line[9] - 48) * 100 + (line[10] - 48) * 10 + (line[11] - 48);
           Serial.printf("\nReceived status: %d\n", status);
+          break;
         }
       }
 
@@ -116,21 +144,14 @@ void setup() {
           char c = client.read();
           Serial.write(c);
         }
+
+        Serial.println("Retrying in 5s.");
+        delay(5000);
       }
 
       client.stop();
     }
   }
-}
-
-WiFiClient getInsecureClient() {
-  return WiFiClient();
-}
-
-WiFiClient getSecureClient() {
-  WiFiClientSecure client;
-  client.setCACert(lets_encrypt_root_ca);
-  return client;
 }
 
 void connectToWiFi() {

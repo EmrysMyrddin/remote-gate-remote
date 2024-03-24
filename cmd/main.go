@@ -14,6 +14,8 @@ type Model struct {
 	Gates chan struct{}
 }
 
+var GATE_SECRET = os.Getenv("GATE_SECRET")
+
 func main() {
 	e := echo.New()
 
@@ -39,6 +41,10 @@ func main() {
 	})
 
 	e.GET("/gate", func(c echo.Context) error {
+		if c.Request().Header.Get("Authorization") != GATE_SECRET {
+			return c.String(403, "Forbidden")
+		}
+
 		model.gateConnected()
 		defer model.gateDisconnected()
 
@@ -86,4 +92,10 @@ func (model Model) gateConnected() {
 
 func (model Model) gateDisconnected() {
 	<-model.Gates
+}
+
+func init() {
+	if GATE_SECRET == "" {
+		GATE_SECRET = "dev_gate_secret"
+	}
 }
