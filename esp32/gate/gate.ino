@@ -22,7 +22,7 @@ const char* ssid = "";
 const char* password = "";
 //*/
 
-/*
+//*
 #define SECURED
 const char* server = "woody-wood-gate.caprover.cocaud.dev";
 const int port = 443;
@@ -39,7 +39,8 @@ const char* protocol = "https";
 const char* protocol = "http";
 #endif
 
-const uint8_t outPin = 13;
+const uint8_t relayPin = 13;
+const uint8_t badgePin = 14;
 
 // Let's Encrypt Root Certificate
 const char* lets_encrypt_root_ca =
@@ -85,8 +86,10 @@ void setup() {
     "||  START  ||\n"
     "=============\n\n");
 
-  pinMode(outPin, OUTPUT);
-  digitalWrite(outPin, LOW);
+  pinMode(relayPin, OUTPUT);
+  pinMode(badgePin, OUTPUT);
+  digitalWrite(relayPin, LOW);
+  digitalWrite(badgePin, LOW);
 
   while (true) {
     connectToWiFi();
@@ -131,9 +134,15 @@ void setup() {
 
       if (status == 200) {
         Serial.println("Opening the gate");
-        digitalWrite(outPin, HIGH);
-        delay(5000);
-        digitalWrite(outPin, LOW);
+        digitalWrite(badgePin, HIGH);
+        delay(500);
+        for (int i = 3 ; i != 0 ; i--) {
+          digitalWrite(relayPin, HIGH);
+          delay(500);
+          digitalWrite(relayPin, LOW);
+          delay(750);
+        }
+        digitalWrite(badgePin, LOW);
         Serial.println("Gate should be open");
       } else if (status == 408) {
         Serial.println("Timeout, reconecting.");
@@ -144,6 +153,7 @@ void setup() {
           char c = client.read();
           Serial.write(c);
         }
+        Serial.println();
 
         Serial.println("Retrying in 5s.");
         delay(5000);
