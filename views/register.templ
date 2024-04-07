@@ -1,0 +1,41 @@
+package views
+
+import (
+	"net/url"
+)
+
+templ RegisterPage() {
+	@html("Woody Wood Gate - Inscription") {
+		@RegisterForm(nil, nil)
+	}
+}
+
+templ RegisterForm(formData url.Values, errors map[string]string) {
+	@authForm("Inscription") {
+		@field("Email", "email", formData, errors,
+			templ.Attributes{"required": true, "type": "email"},
+		)
+		@field("Mot de passe", "password", formData, errors,
+			templ.Attributes{"required": true, "type": "password"},
+		)
+		@field("Confirmation", "confirm", formData, errors,
+			templ.Attributes{"required": true, "type": "password"},
+		)
+		<hr class="m-4"/>
+		@field("Nom complet", "fullName", formData, errors,
+			templ.Attributes{"required": true},
+		)
+		@field("Numéro d'appartement (ex: A001)", "apartment", formData, errors,
+			templ.Attributes{"required": true},
+		)
+		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
+			S'inscrire
+		}
+		@formError(errors["form"])
+	}
+	@authFooter() {
+		Vous avez déjà un compte ?
+		<br/>
+		<a href="/login" class="text-blue-500">Se connecter</a>
+	}
+}

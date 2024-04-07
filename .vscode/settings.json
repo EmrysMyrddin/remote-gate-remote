@@ -1,5 +1,15 @@
 {
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "files.exclude": {
+    "cmd/db/*.go": true,
+    "views/*_templ.go": true
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.includeLanguages": {
+    "templ": "html"
   }
 }

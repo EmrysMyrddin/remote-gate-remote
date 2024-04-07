@@ -1,0 +1,27 @@
+package views
+
+import (
+	c "woody-wood-portail/cmd/ctx"
+)
+
+templ UserPage(isOnline bool) {
+	@html("Woody Wood Gate") {
+		<div class="m-auto mt-4 w-80 flex flex-col items-center">
+			<h1 class="m-4 text-center text-2xl">Woody Wood Gate</h1>
+			<p class="text-center">Bienvenu { c.GetUserFromTempl(ctx).FullName }</p>
+			<p>
+				if isOnline {
+					🟢 Le portail est actuellement <span class="text-green-500">connecté</span>
+				} else {
+					🔴 Le portail est actuellement <span class="text-red-500">déconnecté</span>
+				}
+			</p>
+			@button(templ.Attributes{"hx-get": "/user/open", "class": "my-8", "disabled": !isOnline}) {
+				Ouvrir le portail
+			}
+			<p>
+				<a href="/logout" class="text-blue-500 mt-10">Se déconnecter</a>
+			</p>
+		</div>
+	}
+}

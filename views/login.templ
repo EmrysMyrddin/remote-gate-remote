@@ -1,0 +1,33 @@
+package views
+
+import (
+	"net/url"
+)
+
+templ LoginPage() {
+	@html("Woody Wood Gate - Connexion") {
+		@LoginForm(nil, nil)
+	}
+}
+
+templ LoginForm(values url.Values, errors map[string]string) {
+	@authForm("Connexion") {
+		@field("Email", "email", values, errors,
+			templ.Attributes{"required": true},
+		)
+		@field("Mot de passe", "password", values, errors,
+			templ.Attributes{"type": "password", "required": true},
+		)
+		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
+			Se connecter
+		}
+		@formError(errors["form"])
+	}
+	@authFooter() {
+		Pas encore de compte ?
+		<br/>
+		<a href="/register" class="text-blue-500">
+			Créer un compte
+		</a>
+	}
+}

@@ -1,0 +1,17 @@
+{
+  "name": "woody-wood-portail",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Valentin Cocaud <v.cocaud@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build:prod": "tailwindcss build -o static/css/tailwind.css --minify",
+    "watch": "tailwindcss build -o static/css/tailwind.css --watch",
+    "build": "tailwindcss build -o static/css/tailwind.css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.3"
+  },
+  "packageManager": "yarn@4.1.1"
+}

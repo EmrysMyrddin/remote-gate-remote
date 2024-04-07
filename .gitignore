@@ -3,3 +3,11 @@
 /node_modules/
 /data
 /esp32/gate/config.h
+
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

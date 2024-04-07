@@ -14,7 +14,7 @@
 #define GATE_SECRET "dev_gate_secret"
 #endif
 
-/*
+//*
 const char* ssid = "";
 const char* password = "";
 /*/
@@ -123,6 +123,7 @@ void setup() {
 
       int status = 0;
       while (client.connected()) {
+        Serial.printf("%d", WiFi.RSSI());
         Serial.print(".");
         String line = client.readStringUntil('\n');
         if (line.startsWith("HTTP")) {

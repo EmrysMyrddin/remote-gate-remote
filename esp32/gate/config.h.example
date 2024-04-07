@@ -1,1 +1,1 @@
-#define GATE_SECRET #gate_secret
+#define GATE_SECRET "dev_gate_secret"

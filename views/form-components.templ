@@ -1,0 +1,62 @@
+package views
+
+import (
+	"net/url"
+)
+
+var (
+	authFormClass = "w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2"
+)
+
+templ field(label string, name string, values url.Values, errors map[string]string, attrs templ.Attributes) {
+	<input
+		name={ name }
+		placeholder={ label }
+		class={
+			templ.KV("border-red-500", errors[name] != ""),
+			"border rounded-sm py-1 px-3",
+			attrs["class"],
+		}
+		{ attrs... }
+		value={ values.Get(name) }
+	/>
+	@formError(errors[name])
+}
+
+templ button(attrs templ.Attributes) {
+	<button
+		class={
+			"bg-blue-500 text-white py-1 px-3 rounded-sm",
+			"disabled:opacity-50 disabled:cursor-not-allowed",
+			attrs["class"],
+		}
+		{ attrs... }
+	>
+		{ children... }
+	</button>
+}
+
+templ formError(err string) {
+	if err != "" {
+		<span class="text-red-500">{ " " + err }</span>
+	}
+}
+
+templ authForm(title string) {
+	<form
+		hx-post
+		hx-swap="outerHTML"
+		class="w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2"
+	>
+		<h1 class="text-2xl mb-4 text-center">
+			{ title }
+		</h1>
+		{ children... }
+	</form>
+}
+
+templ authFooter() {
+	<p class="w-80 m-auto mt-10 text-center">
+		{ children... }
+	</p>
+}
