@@ -36,7 +36,7 @@ func html(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</title><link href=\"/static/css/tailwind.css\" rel=\"stylesheet\"><script>\n        document.addEventListener('DOMContentLoaded', function () {\n          document.body.addEventListener('htmx:beforeSwap', function (event) {\n            if (event.detail.xhr.status === 422) {\n              event.detail.shouldSwap = true\n              event.detail.isError = false\n            }\n          })\n        })\n      </script></head><body>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</title><link href=\"/static/css/tailwind.css\" rel=\"stylesheet\"><script>\n        document.addEventListener('DOMContentLoaded', function () {\n          document.body.addEventListener('htmx:beforeSwap', function (event) {\n            if (event.detail.xhr.status === 422) {\n              event.detail.shouldSwap = true\n              event.detail.isError = false\n            }\n          })\n        })\n      </script></head><body><p class=\"absolute top-2 right-2 text-sm text-blue-300\"><a href=\"mailto:v.cocaud+wwg@gmail.com\">Besoin d'aide ?</a></p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

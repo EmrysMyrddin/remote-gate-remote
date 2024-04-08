@@ -11,5 +11,8 @@
   },
   "tailwindCSS.includeLanguages": {
     "templ": "html"
+  },
+  "files.associations": {
+    "*.h.example": "c"
   }
 }
