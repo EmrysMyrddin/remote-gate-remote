@@ -2,6 +2,7 @@ package mails
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
@@ -11,11 +12,27 @@ import (
 	"github.com/mailjet/mailjet-apiv3-go/v4"
 )
 
-var (
-	API_KEY       = "a2cc6295a4a83aee7c5065585c65dc88"
-	SECRET_KEY    = "2233d2c971a933f6a51bb2cd638076a9"
-	mailjetClient = mailjet.NewMailjetClient(API_KEY, SECRET_KEY)
+const (
+	API_KEY    = "a2cc6295a4a83aee7c5065585c65dc88"
+	SECRET_KEY = "2233d2c971a933f6a51bb2cd638076a9"
 )
+
+var (
+	mailjetClient = mailjet.NewMailjetClient(API_KEY, SECRET_KEY)
+	SENDER        = &mailjet.RecipientV31{
+		Email: os.Getenv("MAIL_SENDER_ADDRESS"),
+		Name:  os.Getenv("MAIL_SENDER_NAME"),
+	}
+)
+
+func init() {
+	if SENDER.Email == "" {
+		SENDER.Email = "woody-wood-gate@cocaud.dev"
+	}
+	if SENDER.Name == "" {
+		SENDER.Name = "Woody Wood Gate"
+	}
+}
 
 func SendMail(c echo.Context, recipient db.User, subject string, body templ.Component) error {
 	renderedBody := &strings.Builder{}
@@ -26,10 +43,7 @@ func SendMail(c echo.Context, recipient db.User, subject string, body templ.Comp
 	res, err := mailjetClient.SendMailV31(&mailjet.MessagesV31{
 		Info: []mailjet.InfoMessagesV31{
 			{
-				From: &mailjet.RecipientV31{
-					Email: "woody-wood-gate@cocaud.dev",
-					Name:  "Woody Wood Gate",
-				},
+				From: SENDER,
 				To: &mailjet.RecipientsV31{
 					mailjet.RecipientV31{
 						Email: recipient.Email,
