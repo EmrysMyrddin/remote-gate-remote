@@ -8,14 +8,14 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createLog = `-- name: CreateLog :one
 insert into "logs" (user_id) values ($1) returning id, user_id, created_at
 `
 
-func (q *Queries) CreateLog(ctx context.Context, userID pgtype.UUID) (Log, error) {
+func (q *Queries) CreateLog(ctx context.Context, userID uuid.UUID) (Log, error) {
 	row := q.db.QueryRow(ctx, createLog, userID)
 	var i Log
 	err := row.Scan(&i.ID, &i.UserID, &i.CreatedAt)
@@ -28,7 +28,7 @@ values (
   $1, $2, $3, $4, $5, $6, $7, $8, $9,
   (select (case when count(id) = 0 then 'admin' else 'user' end) role from "users")
 ) 
-returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, created_at, updated_at
+returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -68,6 +68,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PwdMemory,
 		&i.PwdVersion,
 		&i.Role,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -75,10 +76,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUser = `-- name: DeleteUser :one
-delete from "users" where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, created_at, updated_at
+delete from "users" where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) (User, error) {
+func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, deleteUser, id)
 	var i User
 	err := row.Scan(
@@ -93,6 +94,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) (User, error) 
 		&i.PwdMemory,
 		&i.PwdVersion,
 		&i.Role,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -108,11 +110,37 @@ func (q *Queries) DropAllUsers(ctx context.Context) error {
 	return err
 }
 
-const getUser = `-- name: GetUser :one
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, created_at, updated_at from "users" where id = $1
+const emailVerified = `-- name: EmailVerified :one
+update "users" set email_verified = true where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at
 `
 
-func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
+func (q *Queries) EmailVerified(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, emailVerified, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.Apartment,
+		&i.PwdSalt,
+		&i.PwdHash,
+		&i.PwdIterations,
+		&i.PwdParallelism,
+		&i.PwdMemory,
+		&i.PwdVersion,
+		&i.Role,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUser = `-- name: GetUser :one
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at from "users" where id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
 	var i User
 	err := row.Scan(
@@ -127,6 +155,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.PwdMemory,
 		&i.PwdVersion,
 		&i.Role,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -134,7 +163,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, created_at, updated_at from "users" where email = $1
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at from "users" where email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -152,6 +181,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PwdMemory,
 		&i.PwdVersion,
 		&i.Role,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -186,7 +216,7 @@ const listLogsByUser = `-- name: ListLogsByUser :many
 select id, user_id, created_at from "logs" where user_id = $1
 `
 
-func (q *Queries) ListLogsByUser(ctx context.Context, userID pgtype.UUID) ([]Log, error) {
+func (q *Queries) ListLogsByUser(ctx context.Context, userID uuid.UUID) ([]Log, error) {
 	rows, err := q.db.Query(ctx, listLogsByUser, userID)
 	if err != nil {
 		return nil, err
@@ -207,7 +237,7 @@ func (q *Queries) ListLogsByUser(ctx context.Context, userID pgtype.UUID) ([]Log
 }
 
 const listUsers = `-- name: ListUsers :many
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, created_at, updated_at from "users"
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at from "users"
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -231,6 +261,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.PwdMemory,
 			&i.PwdVersion,
 			&i.Role,
+			&i.EmailVerified,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

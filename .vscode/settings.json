@@ -3,8 +3,8 @@
     "editor.defaultFormatter": "vscode.html-language-features"
   },
   "files.exclude": {
-    "cmd/db/*.go": true,
-    "views/*_templ.go": true
+    "cmd/services/db/*.go": true,
+    "views/**/*_templ.go": true
   },
   "editor.quickSuggestions": {
     "strings": "on"

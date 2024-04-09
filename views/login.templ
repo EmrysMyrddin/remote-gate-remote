@@ -7,6 +7,13 @@ import (
 templ LoginPage() {
 	@html("Woody Wood Gate - Connexion") {
 		@LoginForm(nil, nil)
+		@authFooter() {
+			Pas encore de compte ?
+			<br/>
+			<a href="/register" class="text-blue-500">
+				Créer un compte
+			</a>
+		}
 	}
 }
 
@@ -22,12 +29,5 @@ templ LoginForm(values url.Values, errors map[string]string) {
 			Se connecter
 		}
 		@formError(errors["form"])
-	}
-	@authFooter() {
-		Pas encore de compte ?
-		<br/>
-		<a href="/register" class="text-blue-500">
-			Créer un compte
-		</a>
 	}
 }

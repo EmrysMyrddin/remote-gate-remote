@@ -20,11 +20,20 @@ create table "users" (
   pwd_memory int not null,
   pwd_version int not null,
   role varchar(255) not null default 'user',
+  email_verified boolean not null default false,
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp
 );
-
 create unique index users_email_key on "users" (email);
+
+
+create table "used_token" (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references "users" (id),
+  token text not null,
+  created_at timestamp not null default current_timestamp
+);
+create unique index used_tokens_token_key on "used_token" (token);
 
 CREATE TRIGGER trigger_updated_at_users
   BEFORE UPDATE ON "users"

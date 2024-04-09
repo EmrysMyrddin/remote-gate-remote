@@ -2,10 +2,14 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-pre_cmd = ["cd cmd/db && sqlc generate", "templ generate", "yarn build"]
+pre_cmd = [
+  "cd cmd/services/db && sqlc generate",
+  "templ generate",
+  "yarn build",
+]
 cmd = "go build -o ./tmp/main cmd/*.go"
 exclude_dir = ["tmp", "esp32", "node_modules", ".yarn", ".git", "static/css"]
-exclude_regex = ["_test.go", "cmd/db/.*go", "_templ.go"]
+exclude_regex = ["_test.go", "cmd/services/db/.*go", "_templ.go"]
 full_bin = "JWT_SECRET=jwt_secret ./tmp/main"
 include_dir = ["cmd", "views", "pkg"]
 include_ext = ["go", "html", "templ", "sql"]
@@ -13,3 +17,4 @@ log = "build-errors.log"
 send_interrupt = true
 stop_on_error = true
 delay = 0
+kill_delay = 500_000_000

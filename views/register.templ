@@ -7,6 +7,11 @@ import (
 templ RegisterPage() {
 	@html("Woody Wood Gate - Inscription") {
 		@RegisterForm(nil, nil)
+		@authFooter() {
+			Vous avez déjà un compte ?
+			<br/>
+			<a href="/login" class="text-blue-500">Se connecter</a>
+		}
 	}
 }
 
@@ -32,10 +37,5 @@ templ RegisterForm(formData url.Values, errors map[string]string) {
 			S'inscrire
 		}
 		@formError(errors["form"])
-	}
-	@authFooter() {
-		Vous avez déjà un compte ?
-		<br/>
-		<a href="/login" class="text-blue-500">Se connecter</a>
 	}
 }

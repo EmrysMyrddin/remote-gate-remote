@@ -15,6 +15,9 @@ values (
 ) 
 returning *;
 
+-- name: EmailVerified :one
+update "users" set email_verified = true where id = $1 returning *;
+
 -- name: DeleteUser :one
 delete from "users" where id = $1 returning *;
 

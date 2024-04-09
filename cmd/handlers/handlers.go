@@ -3,7 +3,7 @@ package handlers
 import (
 	"os"
 	"woody-wood-portail/cmd/ctx"
-	"woody-wood-portail/cmd/db"
+	"woody-wood-portail/cmd/services/db"
 
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
@@ -11,6 +11,7 @@ import (
 
 var (
 	GATE_SECRET = os.Getenv("GATE_SECRET")
+	BASE_URL    = os.Getenv("BASE_URL")
 )
 
 var queries *db.Queries
@@ -27,6 +28,14 @@ func Redirect(c echo.Context, url string) error {
 		return c.NoContent(204)
 	}
 	return c.Redirect(302, url)
+}
+
+func RedirectWitQuery(c echo.Context, url string) error {
+	query := c.QueryString()
+	if query != "" {
+		url += "?" + query
+	}
+	return Redirect(c, url)
 }
 
 type Model struct {
@@ -54,5 +63,9 @@ func SetQueries(q *db.Queries) {
 func init() {
 	if GATE_SECRET == "" {
 		GATE_SECRET = "dev_gate_secret"
+	}
+
+	if BASE_URL == "" {
+		BASE_URL = "http://localhost"
 	}
 }

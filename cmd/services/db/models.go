@@ -5,17 +5,25 @@
 package db
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Log struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	CreatedAt pgtype.Timestamp
+}
+
+type UsedToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
 	CreatedAt pgtype.Timestamp
 }
 
 type User struct {
-	ID             pgtype.UUID
+	ID             uuid.UUID
 	Email          string
 	FullName       string
 	Apartment      string
@@ -26,6 +34,7 @@ type User struct {
 	PwdMemory      int32
 	PwdVersion     int32
 	Role           string
+	EmailVerified  bool
 	CreatedAt      pgtype.Timestamp
 	UpdatedAt      pgtype.Timestamp
 }

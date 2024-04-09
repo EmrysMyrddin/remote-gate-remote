@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
-	"woody-wood-portail/cmd/db"
+	"os/signal"
+	"time"
 	"woody-wood-portail/cmd/handlers"
 	"woody-wood-portail/cmd/logger"
+	"woody-wood-portail/cmd/services/db"
 	"woody-wood-portail/views"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
+	defer conn.Close(context.Background())
 	handlers.SetQueries(db.New(conn))
 
 	e := echo.New()
@@ -50,5 +54,22 @@ func main() {
 	handlers.RegisterUserHandlers(e, &model, openChannel)
 	handlers.RegisterGateHandlers(e, &model, openChannel)
 
-	e.Logger.Fatal(e.Start(":" + PORT))
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	go func() {
+		if err := e.Start(":" + PORT); err != nil && err != http.ErrServerClosed {
+			logger.Log.Fatal().Err(err).Msg("HTTP server crashed")
+		}
+	}()
+
+	<-sigCtx.Done()
+	logger.Log.Info().Msg("Shutting down server")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Fatal().Err(err).Msg("Failed to gracefully shutdown")
+	}
+	logger.Log.Info().Msg("Server stopped")
 }

@@ -1,0 +1,33 @@
+package views
+
+import (
+	c "woody-wood-portail/cmd/ctx"
+)
+
+templ VerifyPage(err error) {
+	@html("Woody Wood Gate - Verification d'email") {
+		@VerifyForm(err)
+		@authFooter() {
+			Ce n'est pas vous ? 
+			<br/>
+			<a href="/logout" class="text-blue-500">Se déconnecter</a>
+		}
+	}
+}
+
+templ VerifyForm(err error) {
+	@authForm("Verification d'email") {
+		if err != nil {
+			<p class="text-red-500">Le code de vérification est invalide, veuillez réssayer.</p>
+		}
+		<p class="text-center">
+			Vous devez vérifier votre adresse email.
+		</p>
+		<p class="text-sm">
+			Un mail de vérification vous a été envoyé à l'adresse <strong>{ c.GetUserFromTempl(ctx).Email }</strong>.
+		</p>
+		@button(templ.Attributes{"class": "mt-4"}) {
+			Renvoyer un mail
+		}
+	}
+}

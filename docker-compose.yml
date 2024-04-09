@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: gate
     volumes:
-      - ./cmd/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./cmd/services/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
   gate:
     build: .
     ports:

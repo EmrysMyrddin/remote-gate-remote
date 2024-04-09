@@ -1,14 +1,20 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-	"woody-wood-portail/cmd/auth"
+	"woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/logger"
+	"woody-wood-portail/cmd/services/auth"
+	"woody-wood-portail/cmd/services/mails"
 	"woody-wood-portail/views"
+	"woody-wood-portail/views/emails"
 
+	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -22,15 +28,30 @@ var (
 )
 
 func RegisterAuthHandlers(e *echo.Echo) {
-	e.GET("/register", func(c echo.Context) error {
+	authGroup := e.Group("")
+
+	authGroup.Use(auth.JWTMiddleware(queries, func(c echo.Context, err error) error {
+		if !errors.Is(err, auth.ErrJWTMissing) && !errors.Is(errors.Unwrap(err), auth.ErrEmailNotVerified) {
+			RedirectWitQuery(c, "/logout")
+		}
+		return nil
+	}))
+
+	authGroup.GET("/register", func(c echo.Context) error {
+		if ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/user/")
+		}
 		return Render(c, 200, views.RegisterPage())
 	})
 
-	e.GET("/login", func(c echo.Context) error {
+	authGroup.GET("/login", func(c echo.Context) error {
+		if ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/user/")
+		}
 		return Render(c, 200, views.LoginPage())
 	})
 
-	e.POST("/register", func(c echo.Context) error {
+	authGroup.POST("/register", func(c echo.Context) error {
 		values, err := c.FormParams()
 		if err != nil {
 			return Render(c, 422, views.RegisterForm(nil, map[string]string{"form": "Erreur inatendue"}))
@@ -83,13 +104,14 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		createUserParams.FullName = values.Get("fullName")
 		createUserParams.Apartment = values.Get("apartment")
 
+		// TODO: use a transaction
 		newUser, err := queries.CreateUser(c.Request().Context(), createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create user")
 			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
 		}
 
-		token, err := auth.CreateToken(newUser)
+		token, err := auth.CreateToken(newUser, auth.AuthAudience)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create token")
 			return Render(c, 422, views.LoginForm(values, map[string]string{"form": "Erreur inatendue"}))
@@ -97,10 +119,75 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		c.SetCookie(&http.Cookie{Name: "authorization", Value: token, HttpOnly: true})
 
+		mailVerifToken, err := auth.CreateToken(newUser, auth.EmailVerificationAudience)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to create email verification token")
+			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
+		}
+
+		err = mails.SendMail(c,
+			newUser,
+			"Votre lien de vérification de compte Woody Wood Gate",
+			emails.EmailVerification(newUser, templ.SafeURL(fmt.Sprintf("%s/verify?code=%s", BASE_URL, mailVerifToken))),
+		)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send verification email")
+			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
+		}
+
+		return Redirect(c, "/verify")
+	})
+
+	authGroup.GET("/verify", func(c echo.Context) error {
+		if !ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/login")
+		}
+		currentUser := ctx.GetUserFromEcho(c)
+
+		verificationToken := c.QueryParam("code")
+		if verificationToken == "" {
+			if currentUser.EmailVerified {
+				return Redirect(c, "/user/")
+			}
+			return Render(c, 200, views.VerifyPage(nil))
+		}
+
+		userID, token, err := auth.ParseToken(verificationToken, auth.EmailVerificationAudience)
+		if err != nil {
+			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
+			return Render(c, 200, views.VerifyPage(err))
+		} else if *userID != currentUser.ID {
+			logger.Log.Error().
+				Str("code", verificationToken).
+				Stringer("current_user", currentUser.ID).
+				Stringer("userID", userID).
+				Msg("User ID does not match during email verification")
+			return RedirectWitQuery(c, "/logout")
+		}
+
+		if currentUser.EmailVerified {
+			return Redirect(c, "/user/")
+		}
+
+		issuedAt, err := token.Claims.GetIssuedAt()
+		if err != nil {
+			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
+			return Render(c, 200, views.VerifyPage(err))
+		} else if currentUser.UpdatedAt.Time.Add(-2 * time.Second).After(issuedAt.Time) {
+			err = errors.New("token expired")
+			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
+			return Render(c, 200, views.VerifyPage(err))
+		}
+
+		if _, err = queries.EmailVerified(c.Request().Context(), *userID); err != nil {
+			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
+			return Render(c, 200, views.VerifyPage(err))
+		}
+
 		return Redirect(c, "/user/")
 	})
 
-	e.POST("/login", func(c echo.Context) error {
+	authGroup.POST("/login", func(c echo.Context) error {
 		values, err := c.FormParams()
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
@@ -121,19 +208,24 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.LoginForm(values, map[string]string{"password": "Mot de passe invalide"}))
 		}
 
-		token, err := auth.CreateToken(user)
+		token, err := auth.CreateToken(user, auth.AuthAudience)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create token")
 			return Render(c, 422, views.LoginForm(values, map[string]string{"form": "Erreur inatendue"}))
 		}
 
 		c.SetCookie(createCookie(token, MAX_AGE))
-		return Redirect(c, "/user/")
+
+		redirect := c.QueryParam("redirect")
+		if redirect != "" {
+			Redirect(c, redirect)
+		}
+		return RedirectWitQuery(c, "/user/")
 	})
 
 	e.GET("/logout", func(c echo.Context) error {
 		c.SetCookie(createCookie("", -1))
-		return Redirect(c, "/login")
+		return RedirectWitQuery(c, "/login")
 	})
 }
 

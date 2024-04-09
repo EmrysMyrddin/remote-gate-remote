@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"woody-wood-portail/cmd/db"
+	"woody-wood-portail/cmd/services/db"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -23,14 +23,6 @@ type ArgonParams struct {
 	Version     int
 }
 
-var params = ArgonParams{
-	Memory:      64 * 1024,
-	Iterations:  3,
-	Parallelism: uint8(runtime.NumCPU()),
-	Version:     argon2.Version,
-}
-
-const PASS_FORMAT = "$argon2id$v=%d$m=%d,t=%d,p=%d$%s.%s"
 const SALT_LENGTH = 16
 const KEY_LENGTH = 32
 
