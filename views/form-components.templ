@@ -26,13 +26,16 @@ templ field(label string, name string, values url.Values, errors map[string]stri
 templ button(attrs templ.Attributes) {
 	<button
 		class={
-			"bg-blue-500 text-white py-1 px-3 rounded-sm",
-			"disabled:opacity-50 disabled:cursor-not-allowed",
+			"bg-blue-500 text-white py-1 px-3 rounded-sm relative",
+			"disabled:opacity-50 disabled:cursor-not-allowed transition-opacity",
 			attrs["class"],
 		}
 		{ attrs... }
 	>
-		{ children... }
+		<img src="/static/images/spinner.svg" class="show-when-loading h-8 absolute inset-0 m-auto"/>
+		<span class="hide-when-loading">
+			{ children... }
+		</span>
 	</button>
 }
 
@@ -42,10 +45,12 @@ templ formError(err string) {
 	}
 }
 
-templ authForm(title string) {
+templ authForm(title string, attrs ...templ.Attributes) {
 	<form
+		{ mergeAttributes(attrs)... }
 		hx-post
 		hx-swap="outerHTML"
+		hx-disabled-elt="button"
 		class="w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2"
 	>
 		<h1 class="text-2xl mb-4 text-center">

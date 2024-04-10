@@ -45,4 +45,7 @@ var requestLogger = zerolog.New(zerolog.ConsoleWriter{
 var Log = zerolog.New(zerolog.ConsoleWriter{
 	Out:        os.Stderr,
 	TimeFormat: time.TimeOnly,
+	FormatMessage: func(i interface{}) string {
+		return fmt.Sprintf("---        %s", i)
+	},
 }).With().Timestamp().Stack().Logger()

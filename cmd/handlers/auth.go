@@ -10,6 +10,7 @@ import (
 	"woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/auth"
+	"woody-wood-portail/cmd/services/db"
 	"woody-wood-portail/cmd/services/mails"
 	"woody-wood-portail/views"
 	"woody-wood-portail/views/emails"
@@ -119,17 +120,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		c.SetCookie(&http.Cookie{Name: "authorization", Value: token, HttpOnly: true})
 
-		mailVerifToken, err := auth.CreateToken(newUser, auth.EmailVerificationAudience)
-		if err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to create email verification token")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
-		}
-
-		err = mails.SendMail(c,
-			newUser,
-			"Votre lien de vérification de compte Woody Wood Gate",
-			emails.EmailVerification(newUser, templ.SafeURL(fmt.Sprintf("%s/verify?code=%s", BASE_URL, mailVerifToken))),
-		)
+		err = sendVerificationMail(c, newUser)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send verification email")
 			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
@@ -187,6 +178,27 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		return Redirect(c, "/user/")
 	})
 
+	authGroup.POST("/reset-verification", func(c echo.Context) error {
+		if !ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/login")
+		}
+		currentUser := ctx.GetUserFromEcho(c)
+
+		if currentUser.EmailVerified {
+			return RedirectWitQuery(c, "/user/")
+		}
+
+		err := sendVerificationMail(c, currentUser)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send verification email")
+			return Render(c, 422, views.VerifyForm(err, ""))
+		}
+
+		<-time.After(2 * time.Second)
+
+		return Render(c, 200, views.VerifyForm(nil, "Un nouveau lien de vérification vous a été envoyé"))
+	})
+
 	authGroup.POST("/login", func(c echo.Context) error {
 		values, err := c.FormParams()
 		if err != nil {
@@ -236,4 +248,22 @@ func createCookie(token string, maxAge int) *http.Cookie {
 		HttpOnly: true,
 		MaxAge:   maxAge,
 	}
+}
+
+func sendVerificationMail(c echo.Context, user db.User) error {
+	mailVerifToken, err := auth.CreateToken(user, auth.EmailVerificationAudience)
+	if err != nil {
+		return fmt.Errorf("unable to create email verification token: %w", err)
+	}
+
+	err = mails.SendMail(c,
+		user,
+		"Votre lien de vérification de compte Woody Wood Gate",
+		emails.EmailVerification(user, templ.SafeURL(fmt.Sprintf("%s/verify?code=%s", BASE_URL, mailVerifToken))),
+	)
+	if err != nil {
+		return fmt.Errorf("unable to send verification email: %w", err)
+	}
+
+	return nil
 }

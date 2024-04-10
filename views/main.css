@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .show-when-loading, .hide-when-loading {
+    @apply transition-opacity;
+  }
+  
+  .show-when-loading {
+    opacity: 0;
+  }
+  
+  .htmx-request.hide-when-loading, .htmx-request .hide-when-loading {
+    opacity: 0;
+  }
+  
+  .htmx-request.show-when-loading, .htmx-request .show-when-loading {
+    opacity: 1;
+  }
+}
+

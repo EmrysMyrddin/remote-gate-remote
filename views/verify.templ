@@ -6,7 +6,7 @@ import (
 
 templ VerifyPage(err error) {
 	@html("Woody Wood Gate - Verification d'email") {
-		@VerifyForm(err)
+		@VerifyForm(err, "")
 		@authFooter() {
 			Ce n'est pas vous ? 
 			<br/>
@@ -15,8 +15,8 @@ templ VerifyPage(err error) {
 	}
 }
 
-templ VerifyForm(err error) {
-	@authForm("Verification d'email") {
+templ VerifyForm(err error, successMessage string) {
+	@authForm("Verification d'email", templ.Attributes{"hx-post": "/reset-verification"}) {
 		if err != nil {
 			<p class="text-red-500">Le code de vérification est invalide, veuillez réssayer.</p>
 		}
@@ -26,6 +26,9 @@ templ VerifyForm(err error) {
 		<p class="text-sm">
 			Un mail de vérification vous a été envoyé à l'adresse <strong>{ c.GetUserFromTempl(ctx).Email }</strong>.
 		</p>
+		if successMessage != "" {
+			<p class="text-green-500">{ successMessage }</p>
+		}
 		@button(templ.Attributes{"class": "mt-4"}) {
 			Renvoyer un mail
 		}

@@ -6,9 +6,9 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build:prod": "tailwindcss build -o static/css/tailwind.css --minify",
-    "watch": "tailwindcss build -o static/css/tailwind.css --watch",
-    "build": "tailwindcss build -o static/css/tailwind.css"
+    "build:prod": "yarn build --minify",
+    "watch": "yarn build --watch",
+    "build": "tailwindcss build -i views/main.css -o static/css/tailwind.css"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.3"

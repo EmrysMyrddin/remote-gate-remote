@@ -10,6 +10,7 @@ templ html(title string) {
 				{ title }
 			</title>
 			<link href="/static/css/tailwind.css" rel="stylesheet"/>
+			<link href="/static/css/style.css" rel="stylesheet"/>
 			<script>
         document.addEventListener('DOMContentLoaded', function () {
           document.body.addEventListener('htmx:beforeSwap', function (event) {
@@ -25,7 +26,6 @@ templ html(title string) {
 			<p class="absolute top-2 right-2 text-sm text-blue-300">
 				<a href="mailto:v.cocaud+wwg@gmail.com">Besoin d'aide ?</a>
 			</p>
-			
 			{ children... }
 			<script src="https://unpkg.com/htmx.org/dist/htmx.js"></script>
 		</body>

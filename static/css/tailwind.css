@@ -558,6 +558,14 @@ video {
   position: absolute;
 }
 
+.relative {
+  position: relative;
+}
+
+.inset-0 {
+  inset: 0px;
+}
+
 .right-2 {
   right: 0.5rem;
 }
@@ -597,6 +605,10 @@ video {
 
 .flex {
   display: flex;
+}
+
+.h-8 {
+  height: 2rem;
 }
 
 .w-80 {
@@ -696,6 +708,30 @@ video {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.show-when-loading, .hide-when-loading {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.show-when-loading {
+  opacity: 0;
+}
+
+.htmx-request.hide-when-loading, .htmx-request .hide-when-loading {
+  opacity: 0;
+}
+
+.htmx-request.show-when-loading, .htmx-request .show-when-loading {
+  opacity: 1;
+}
+
 .disabled\:cursor-not-allowed:disabled {
   cursor: not-allowed;
 }
@@ -703,3 +739,4 @@ video {
 .disabled\:opacity-50:disabled {
   opacity: 0.5;
 }
+
