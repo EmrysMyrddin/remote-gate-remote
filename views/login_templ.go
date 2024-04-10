@@ -10,10 +10,6 @@ import "context"
 import "io"
 import "bytes"
 
-import (
-	"net/url"
-)
-
 func LoginPage() templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
@@ -33,7 +29,7 @@ func LoginPage() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = LoginForm(nil, nil).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = LoginForm(FormModel{}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -76,7 +72,7 @@ func LoginPage() templ.Component {
 	})
 }
 
-func LoginForm(values url.Values, errors map[string]string) templ.Component {
+func LoginForm(model FormModel) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -95,9 +91,9 @@ func LoginForm(values url.Values, errors map[string]string) templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = field("Email", "email", values, errors,
-				templ.Attributes{"required": true},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Email", Name: "email", Required: true,
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -105,9 +101,9 @@ func LoginForm(values url.Values, errors map[string]string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = field("Mot de passe", "password", values, errors,
-				templ.Attributes{"type": "password", "required": true},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Mot de passe", Name: "password", Type: "password", Required: true,
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -138,7 +134,7 @@ func LoginForm(values url.Values, errors map[string]string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = formError(errors["form"]).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = formError(model.Errors["form"]).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

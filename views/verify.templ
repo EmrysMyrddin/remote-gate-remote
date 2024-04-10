@@ -4,9 +4,14 @@ import (
 	c "woody-wood-portail/cmd/ctx"
 )
 
+type VerifyModel struct {
+	Err       error
+	EmailSent bool
+}
+
 templ VerifyPage(err error) {
 	@html("Woody Wood Gate - Verification d'email") {
-		@VerifyForm(err, "")
+		@VerifyForm(VerifyModel{})
 		@authFooter() {
 			Ce n'est pas vous ? 
 			<br/>
@@ -15,9 +20,9 @@ templ VerifyPage(err error) {
 	}
 }
 
-templ VerifyForm(err error, successMessage string) {
+templ VerifyForm(model VerifyModel) {
 	@authForm("Verification d'email", templ.Attributes{"hx-post": "/reset-verification"}) {
-		if err != nil {
+		if model.Err != nil {
 			<p class="text-red-500">Le code de vérification est invalide, veuillez réssayer.</p>
 		}
 		<p class="text-center">
@@ -26,8 +31,8 @@ templ VerifyForm(err error, successMessage string) {
 		<p class="text-sm">
 			Un mail de vérification vous a été envoyé à l'adresse <strong>{ c.GetUserFromTempl(ctx).Email }</strong>.
 		</p>
-		if successMessage != "" {
-			<p class="text-green-500">{ successMessage }</p>
+		if model.EmailSent {
+			<p class="text-green-500">Un nouveau lien de vérification vous a été envoyé</p>
 		}
 		@button(templ.Attributes{"class": "mt-4"}) {
 			Renvoyer un mail

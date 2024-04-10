@@ -1,12 +1,8 @@
 package views
 
-import (
-	"net/url"
-)
-
 templ RegisterPage() {
 	@html("Woody Wood Gate - Inscription") {
-		@RegisterForm(nil, nil)
+		@RegisterForm(FormModel{})
 		@authFooter() {
 			Vous avez déjà un compte ?
 			<br/>
@@ -15,27 +11,27 @@ templ RegisterPage() {
 	}
 }
 
-templ RegisterForm(formData url.Values, errors map[string]string) {
+templ RegisterForm(model FormModel) {
 	@authForm("Inscription") {
-		@field("Email", "email", formData, errors,
-			templ.Attributes{"required": true, "type": "email"},
-		)
-		@field("Mot de passe", "password", formData, errors,
-			templ.Attributes{"required": true, "type": "password"},
-		)
-		@field("Confirmation", "confirm", formData, errors,
-			templ.Attributes{"required": true, "type": "password"},
-		)
+		@field(FieldModel{FormModel: model,
+			Label: "Email", Name: "email", Required: true, Type: "email",
+		})
+		@field(FieldModel{FormModel: model,
+			Label: "Mot de passe", Name: "password", Required: true, Type: "password",
+		})
+		@field(FieldModel{FormModel: model,
+			Label: "Confirmation", Name: "confirm", Required: true, Type: "password",
+		})
 		<hr class="m-4"/>
-		@field("Nom complet", "fullName", formData, errors,
-			templ.Attributes{"required": true},
-		)
-		@field("Numéro d'appartement (ex: A001)", "apartment", formData, errors,
-			templ.Attributes{"required": true},
-		)
+		@field(FieldModel{FormModel: model,
+			Label: "Nom complet", Name: "fullName", Required: true,
+		})
+		@field(FieldModel{FormModel: model,
+			Label: "Numéro d'appartement (ex: A001)", Name: "apartment", Required: true,
+		})
 		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
 			S'inscrire
 		}
-		@formError(errors["form"])
+		@formError(model.Errors["form"])
 	}
 }

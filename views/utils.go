@@ -2,6 +2,16 @@ package views
 
 import "github.com/a-h/templ"
 
+func expect1(attrs []templ.Attributes) templ.Attributes {
+	if len(attrs) == 0 {
+		return nil
+	}
+	if len(attrs) == 1 {
+		return attrs[0]
+	}
+	panic("attr called with multiple attributes")
+}
+
 func mergeAttributes(attrs []templ.Attributes) templ.Attributes {
 	if attrs == nil {
 		return nil

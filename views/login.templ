@@ -1,12 +1,8 @@
 package views
 
-import (
-	"net/url"
-)
-
 templ LoginPage() {
 	@html("Woody Wood Gate - Connexion") {
-		@LoginForm(nil, nil)
+		@LoginForm(FormModel{})
 		@authFooter() {
 			Pas encore de compte ?
 			<br/>
@@ -17,17 +13,17 @@ templ LoginPage() {
 	}
 }
 
-templ LoginForm(values url.Values, errors map[string]string) {
+templ LoginForm(model FormModel) {
 	@authForm("Connexion") {
-		@field("Email", "email", values, errors,
-			templ.Attributes{"required": true},
-		)
-		@field("Mot de passe", "password", values, errors,
-			templ.Attributes{"type": "password", "required": true},
-		)
+		@field(FieldModel{FormModel: model,
+			Label: "Email", Name: "email", Required: true,
+		})
+		@field(FieldModel{FormModel: model,
+			Label: "Mot de passe", Name: "password", Type: "password", Required: true,
+		})
 		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
 			Se connecter
 		}
-		@formError(errors["form"])
+		@formError(model.Errors["form"])
 	}
 }

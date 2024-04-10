@@ -55,50 +55,66 @@ func RegisterAuthHandlers(e *echo.Echo) {
 	authGroup.POST("/register", func(c echo.Context) error {
 		values, err := c.FormParams()
 		if err != nil {
-			return Render(c, 422, views.RegisterForm(nil, map[string]string{"form": "Erreur inatendue"}))
+			return Render(c, 422, views.RegisterForm(views.FormModel{
+				Errors: views.Errors{"form": "Erreur inatendue"},
+			}))
+		}
+		model := views.FormModel{
+			Values: values,
+			Errors: views.Errors{},
 		}
 
 		if values.Get("email") == "" {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"email": "Email obligatoire"}))
+			model.Errors["email"] = "Email obligatoire"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 		if !emailRegex.MatchString(values.Get("email")) {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"email": "Email invalide"}))
+			model.Errors["email"] = "Email invalide"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		_, err = queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
 		if err == nil {
 			logger.Log.Info().Err(err).Msg("Email already used")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"email": "Email déjà utilisé"}))
+			model.Errors["email"] = "Email déjà utilisé"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 		if err != pgx.ErrNoRows {
 			logger.Log.Error().Err(err).Msg("Unable to get user by email")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"email": "Erreur inatendue"}))
+			model.Errors["email"] = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		if values.Get("password") == "" {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"password": "Mot de passe obligatoire"}))
+			model.Errors["password"] = "Mot de passe obligatoire"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		if values.Get("password") != values.Get("confirm") {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"confirm": "Les mots de passes ne correspondent pas"}))
+			model.Errors["confirm"] = "Les mots de passes ne correspondent pas"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		if values.Get("fullName") == "" {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"fullName": "Nom complet obligatoire"}))
+			model.Errors["fullName"] = "Nom complet obligatoire"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		apartment := strings.ToUpper(values.Get("apartment"))
 		if apartment == "" {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"apartment": "Appartement obligatoire"}))
+			model.Errors["apartment"] = "Appartement obligatoire"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 		if (!strings.HasPrefix(apartment, "A") && !strings.HasPrefix(apartment, "B")) || len(apartment) != 4 {
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"apartment": "Appartement invalide. Exemple: A001"}))
+			model.Errors["apartment"] = "Appartement invalide. Exemple: A001"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		createUserParams, err := auth.CreateHash(values.Get("password"))
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to hash password")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		createUserParams.Email = values.Get("email")
@@ -109,13 +125,15 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		newUser, err := queries.CreateUser(c.Request().Context(), createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create user")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		token, err := auth.CreateToken(newUser, auth.AuthAudience)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create token")
-			return Render(c, 422, views.LoginForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.LoginForm(model))
 		}
 
 		c.SetCookie(&http.Cookie{Name: "authorization", Value: token, HttpOnly: true})
@@ -123,7 +141,8 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		err = sendVerificationMail(c, newUser)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			return Render(c, 422, views.RegisterForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		return Redirect(c, "/verify")
@@ -191,39 +210,47 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		err := sendVerificationMail(c, currentUser)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			return Render(c, 422, views.VerifyForm(err, ""))
+			return Render(c, 422, views.VerifyForm(views.VerifyModel{Err: err}))
 		}
 
 		<-time.After(2 * time.Second)
 
-		return Render(c, 200, views.VerifyForm(nil, "Un nouveau lien de vérification vous a été envoyé"))
+		return Render(c, 200, views.VerifyForm(views.VerifyModel{EmailSent: true}))
 	})
 
 	authGroup.POST("/login", func(c echo.Context) error {
 		values, err := c.FormParams()
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
-			return Render(c, 422, views.LoginForm(nil, map[string]string{"form": "Erreur inatendue"}))
+			return Render(c, 422, views.LoginForm(views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}}))
+		}
+		model := views.FormModel{
+			Values: values,
+			Errors: views.Errors{},
 		}
 
 		user, err := queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
 		if err != nil {
-			return Render(c, 422, views.LoginForm(values, map[string]string{"email": "Email invalide"}))
+			model.Errors["email"] = "Email invalide"
+			return Render(c, 422, views.LoginForm(model))
 		}
 
 		ok, err := auth.CompareHashAgainstPassword(user, values.Get("password"))
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to compare password")
-			return Render(c, 422, views.LoginForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.LoginForm(model))
 		}
 		if !ok {
-			return Render(c, 422, views.LoginForm(values, map[string]string{"password": "Mot de passe invalide"}))
+			model.Errors["password"] = "Mot de passe invalide"
+			return Render(c, 422, views.LoginForm(model))
 		}
 
 		token, err := auth.CreateToken(user, auth.AuthAudience)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create token")
-			return Render(c, 422, views.LoginForm(values, map[string]string{"form": "Erreur inatendue"}))
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.LoginForm(model))
 		}
 
 		c.SetCookie(createCookie(token, MAX_AGE))

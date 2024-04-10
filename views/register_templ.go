@@ -10,10 +10,6 @@ import "context"
 import "io"
 import "bytes"
 
-import (
-	"net/url"
-)
-
 func RegisterPage() templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
@@ -33,7 +29,7 @@ func RegisterPage() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = RegisterForm(nil, nil).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = RegisterForm(FormModel{}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -76,7 +72,7 @@ func RegisterPage() templ.Component {
 	})
 }
 
-func RegisterForm(formData url.Values, errors map[string]string) templ.Component {
+func RegisterForm(model FormModel) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -95,9 +91,9 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = field("Email", "email", formData, errors,
-				templ.Attributes{"required": true, "type": "email"},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Email", Name: "email", Required: true, Type: "email",
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -105,9 +101,9 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = field("Mot de passe", "password", formData, errors,
-				templ.Attributes{"required": true, "type": "password"},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Mot de passe", Name: "password", Required: true, Type: "password",
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -115,9 +111,9 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = field("Confirmation", "confirm", formData, errors,
-				templ.Attributes{"required": true, "type": "password"},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Confirmation", Name: "confirm", Required: true, Type: "password",
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -125,9 +121,9 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = field("Nom complet", "fullName", formData, errors,
-				templ.Attributes{"required": true},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Nom complet", Name: "fullName", Required: true,
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -135,9 +131,9 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = field("Numéro d'appartement (ex: A001)", "apartment", formData, errors,
-				templ.Attributes{"required": true},
-			).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Numéro d'appartement (ex: A001)", Name: "apartment", Required: true,
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -168,7 +164,7 @@ func RegisterForm(formData url.Values, errors map[string]string) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = formError(errors["form"]).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = formError(model.Errors["form"]).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
