@@ -16,40 +16,35 @@ var (
 	ErrIncompatibleVersion = errors.New("incompatible version of argon2")
 )
 
-type ArgonParams struct {
-	Memory      uint32
-	Iterations  uint32
-	Parallelism uint8
-	Version     int
-}
-
 const SALT_LENGTH = 16
 const KEY_LENGTH = 32
 
-func CreateHash(password string) (db.CreateUserParams, error) {
+func CreateHash(password string, params db.WithPassword) error {
 	salt, err := generateRandomSalt()
 	if err != nil {
-		return db.CreateUserParams{}, fmt.Errorf("failed to generate salt: %w", err)
+		return fmt.Errorf("failed to generate salt: %w", err)
 	}
 
-	result := db.CreateUserParams{
-		PwdSalt:        base64.RawStdEncoding.EncodeToString(salt),
-		PwdVersion:     argon2.Version,
-		PwdIterations:  3,
-		PwdMemory:      64 * 1024,
-		PwdParallelism: int16(runtime.NumCPU()),
+	argon2Password := db.Argon2Password{
+		Salt:        base64.RawStdEncoding.EncodeToString(salt),
+		Iterations:  3,
+		Memory:      64 * 1024,
+		Parallelism: int16(runtime.NumCPU()),
+		Version:     argon2.Version,
 	}
 
-	result.PwdHash = base64.RawStdEncoding.EncodeToString(argon2.IDKey(
+	argon2Password.Hash = base64.RawStdEncoding.EncodeToString(argon2.IDKey(
 		[]byte(password),
 		salt,
-		uint32(result.PwdIterations),
-		uint32(result.PwdMemory),
-		uint8(result.PwdParallelism),
+		uint32(argon2Password.Iterations),
+		uint32(argon2Password.Memory),
+		uint8(argon2Password.Parallelism),
 		KEY_LENGTH,
 	))
 
-	return result, nil
+	params.SetPassword(argon2Password)
+
+	return nil
 }
 
 func CompareHashAgainstPassword(user db.User, password string) (bool, error) {

@@ -10,9 +10,11 @@ import "context"
 import "io"
 import "bytes"
 
-import "woody-wood-portail/cmd/services/db"
+import (
+	"woody-wood-portail/cmd/services/db"
+)
 
-func EmailVerification(user db.User, url templ.SafeURL) templ.Component {
+func PasswordReset(user db.User, url templ.SafeURL) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -25,7 +27,7 @@ func EmailVerification(user db.User, url templ.SafeURL) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Bienvenue sur Woody Wood Gate</h1><p><a href=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Réinitialisation du mot de passe</h1><p><a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -34,20 +36,20 @@ func EmailVerification(user db.User, url templ.SafeURL) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">Veuillez cliquer sur ce lien pour confirmer votre mail</a></p><p>Si vous n'arrivez pas à cliquer sur le lien, copiez-collez l'adresse suivante dans votre navigateur : ")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">Veuillez cliquer sur ce lien pour choisir un nouveau mot de passe</a></p><p>Si vous n'arrivez pas à cliquer sur le lien, copiez-collez l'adresse suivante dans votre navigateur : ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(string(url))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/email-verification.templ`, Line: 11, Col: 118}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/reset-password.templ`, Line: 13, Col: 118}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</p>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</p><p>Si vous n'avez pas demandé de réinitialisation de mot de passe, vous pouvez ignorer cet email.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

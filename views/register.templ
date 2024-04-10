@@ -29,7 +29,7 @@ templ RegisterForm(model FormModel) {
 		@field(FieldModel{FormModel: model,
 			Label: "Numéro d'appartement (ex: A001)", Name: "apartment", Required: true,
 		})
-		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
+		@button(templ.Attributes{"type": "submit"}) {
 			S'inscrire
 		}
 		@formError(model.Errors["form"])

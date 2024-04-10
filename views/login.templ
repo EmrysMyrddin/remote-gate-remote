@@ -21,7 +21,10 @@ templ LoginForm(model FormModel) {
 		@field(FieldModel{FormModel: model,
 			Label: "Mot de passe", Name: "password", Type: "password", Required: true,
 		})
-		@button(templ.Attributes{"type": "submit", "class": "mt-4"}) {
+		<a href="/password-forgotten" class="text-blue-500 text-xs text-end w-full">
+			Mot de passe oublié ?
+		</a>
+		@button(templ.Attributes{"type": "submit"}) {
 			Se connecter
 		}
 		@formError(model.Errors["form"])

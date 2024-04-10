@@ -47,12 +47,12 @@ templ field(model FieldModel) {
 
 templ button(attrs ...templ.Attributes) {
 	<button
-		{ expect1(attrs)... }
 		class={
 			"bg-blue-500 text-white py-1 px-3 rounded-sm relative",
 			"disabled:opacity-50 disabled:cursor-not-allowed transition-opacity",
 			expect1(attrs)["class"],
 		}
+		{ expect1(attrs)... }
 	>
 		<img src="/static/images/spinner.svg" class="show-when-loading h-8 absolute inset-0 m-auto"/>
 		<span class="hide-when-loading">
@@ -73,7 +73,7 @@ templ authForm(title string, attrs ...templ.Attributes) {
 		hx-post
 		hx-swap="outerHTML"
 		hx-disabled-elt="button"
-		class="w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2"
+		class="w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 [&_button]:last-of-type:mt-4"
 	>
 		<h1 class="text-2xl mb-4 text-center">
 			{ title }

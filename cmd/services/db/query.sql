@@ -15,8 +15,11 @@ values (
 ) 
 returning *;
 
--- name: EmailVerified :one
-update "users" set email_verified = true where id = $1 returning *;
+-- name: EmailVerified :exec
+update "users" set email_verified = true where id = $1;
+
+-- name: UpdatePassword :exec
+update "users" set pwd_salt = $2, pwd_hash = $3, pwd_iterations = $4, pwd_parallelism = $5, pwd_memory = $6, pwd_version = $7 where id = $1;
 
 -- name: DeleteUser :one
 delete from "users" where id = $1 returning *;

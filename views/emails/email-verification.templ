@@ -7,4 +7,7 @@ templ EmailVerification(user db.User, url templ.SafeURL) {
 	<p>
 		<a href={ url }>Veuillez cliquer sur ce lien pour confirmer votre mail</a>
 	</p>
+	<p>
+		Si vous n'arrivez pas à cliquer sur le lien, copiez-collez l'adresse suivante dans votre navigateur : { string(url) }
+	</p>
 }

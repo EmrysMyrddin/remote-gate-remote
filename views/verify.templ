@@ -34,7 +34,7 @@ templ VerifyForm(model VerifyModel) {
 		if model.EmailSent {
 			<p class="text-green-500">Un nouveau lien de vérification vous a été envoyé</p>
 		}
-		@button(templ.Attributes{"class": "mt-4"}) {
+		@button(templ.Attributes{"type": "submit"}) {
 			Renvoyer un mail
 		}
 	}

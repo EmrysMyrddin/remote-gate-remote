@@ -110,30 +110,13 @@ func (q *Queries) DropAllUsers(ctx context.Context) error {
 	return err
 }
 
-const emailVerified = `-- name: EmailVerified :one
-update "users" set email_verified = true where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at
+const emailVerified = `-- name: EmailVerified :exec
+update "users" set email_verified = true where id = $1
 `
 
-func (q *Queries) EmailVerified(ctx context.Context, id uuid.UUID) (User, error) {
-	row := q.db.QueryRow(ctx, emailVerified, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.FullName,
-		&i.Apartment,
-		&i.PwdSalt,
-		&i.PwdHash,
-		&i.PwdIterations,
-		&i.PwdParallelism,
-		&i.PwdMemory,
-		&i.PwdVersion,
-		&i.Role,
-		&i.EmailVerified,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) EmailVerified(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, emailVerified, id)
+	return err
 }
 
 const getUser = `-- name: GetUser :one
@@ -273,4 +256,31 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePassword = `-- name: UpdatePassword :exec
+update "users" set pwd_salt = $2, pwd_hash = $3, pwd_iterations = $4, pwd_parallelism = $5, pwd_memory = $6, pwd_version = $7 where id = $1
+`
+
+type UpdatePasswordParams struct {
+	ID             uuid.UUID
+	PwdSalt        string
+	PwdHash        string
+	PwdIterations  int32
+	PwdParallelism int16
+	PwdMemory      int32
+	PwdVersion     int32
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
+	_, err := q.db.Exec(ctx, updatePassword,
+		arg.ID,
+		arg.PwdSalt,
+		arg.PwdHash,
+		arg.PwdIterations,
+		arg.PwdParallelism,
+		arg.PwdMemory,
+		arg.PwdVersion,
+	)
+	return err
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"woody-wood-portail/views/emails"
 
 	"github.com/a-h/templ"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -110,16 +112,18 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
-		createUserParams, err := auth.CreateHash(values.Get("password"))
+		createUserParams := db.CreateUserParams{
+			Email:     values.Get("email"),
+			FullName:  values.Get("fullName"),
+			Apartment: apartment,
+		}
+
+		err = auth.CreateHash(values.Get("password"), &createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to hash password")
 			model.Errors["form"] = "Erreur inatendue"
 			return Render(c, 422, views.RegisterForm(model))
 		}
-
-		createUserParams.Email = values.Get("email")
-		createUserParams.FullName = values.Get("fullName")
-		createUserParams.Apartment = values.Get("apartment")
 
 		// TODO: use a transaction
 		newUser, err := queries.CreateUser(c.Request().Context(), createUserParams)
@@ -129,14 +133,11 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
-		token, err := auth.CreateToken(newUser, auth.AuthAudience)
-		if err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to create token")
+		if err := addAuthenticationCookie(c, newUser.ID); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
 			model.Errors["form"] = "Erreur inatendue"
 			return Render(c, 422, views.LoginForm(model))
 		}
-
-		c.SetCookie(&http.Cookie{Name: "authorization", Value: token, HttpOnly: true})
 
 		err = sendVerificationMail(c, newUser)
 		if err != nil {
@@ -189,7 +190,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 200, views.VerifyPage(err))
 		}
 
-		if _, err = queries.EmailVerified(c.Request().Context(), *userID); err != nil {
+		if err = queries.EmailVerified(c.Request().Context(), *userID); err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
 			return Render(c, 200, views.VerifyPage(err))
 		}
@@ -246,14 +247,11 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.LoginForm(model))
 		}
 
-		token, err := auth.CreateToken(user, auth.AuthAudience)
-		if err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to create token")
+		if err := addAuthenticationCookie(c, user.ID); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
 			model.Errors["form"] = "Erreur inatendue"
 			return Render(c, 422, views.LoginForm(model))
 		}
-
-		c.SetCookie(createCookie(token, MAX_AGE))
 
 		redirect := c.QueryParam("redirect")
 		if redirect != "" {
@@ -262,10 +260,157 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		return RedirectWitQuery(c, "/user/")
 	})
 
+	authGroup.GET("/password-forgotten", func(c echo.Context) error {
+		resetError := c.QueryParam("error")
+		logger.Log.Info().Str("error", resetError).Msg("Password forgotten error")
+		if resetError != "" {
+			logger.Log.Error().Str("error", resetError).Msg("Unable to reset password")
+			return Render(c, 422, views.PasswordForgottenPage(resetError))
+		}
+		return Render(c, 200, views.PasswordForgottenPage(""))
+	})
+
+	authGroup.POST("/password-forgotten", func(c echo.Context) error {
+		values, err := c.FormParams()
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to get form params")
+			return Render(c, 422, views.PasswordForgottenForm(views.PasswordForgottenModel{
+				FormModel: views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}},
+			}))
+		}
+		model := views.PasswordForgottenModel{
+			FormModel: views.FormModel{
+				Values: values,
+				Errors: views.Errors{},
+			},
+		}
+
+		user, err := queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
+		if err != nil {
+			model.Errors["email"] = "Email invalide"
+			return Render(c, 422, views.PasswordForgottenForm(model))
+		}
+
+		resetToken, err := auth.CreateToken(user.ID, auth.ResetPasswordAudience)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to create reset token")
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.PasswordForgottenForm(model))
+		}
+
+		err = mails.SendMail(c,
+			user,
+			"Réinitialisation de votre mot de passe Woody Wood Gate",
+			emails.PasswordReset(user, templ.SafeURL(fmt.Sprintf("%s/reset-password?code=%s", BASE_URL, resetToken))),
+		)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send password reset email")
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.PasswordForgottenForm(model))
+		}
+
+		return Render(c, 200, views.PasswordForgottenForm(views.PasswordForgottenModel{EmailSent: true}))
+	})
+
+	authGroup.GET("/reset-password", func(c echo.Context) error {
+		code := c.QueryParam("code")
+		if code == "" {
+			return RedirectWitQuery(c, "/password-forgotten")
+		}
+
+		userID, _, err := auth.ParseToken(code, auth.ResetPasswordAudience)
+		if err != nil {
+			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
+			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
+		}
+
+		_, err = queries.GetUser(c.Request().Context(), *userID)
+		if err != nil {
+			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
+			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
+		}
+
+		return Render(c, 200, views.ResetPasswordPage())
+	})
+
+	authGroup.POST("/reset-password", func(c echo.Context) error {
+		code := c.QueryParam("code")
+		if code == "" {
+			return RedirectWitQuery(c, "/password-forgotten")
+		}
+
+		userID, _, err := auth.ParseToken(code, auth.ResetPasswordAudience)
+		if err != nil {
+			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
+			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
+		}
+
+		_, err = queries.GetUser(c.Request().Context(), *userID)
+		if err != nil {
+			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
+			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
+		}
+
+		values, err := c.FormParams()
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to get form params")
+			return Render(c, 422, views.ResetPasswordForm(views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}}))
+		}
+
+		model := views.FormModel{
+			Values: values,
+			Errors: views.Errors{},
+		}
+
+		if values.Get("password") != values.Get("confirm") {
+			model.Errors["confirm"] = "Les mots de passes ne correspondent pas"
+			return Render(c, 422, views.ResetPasswordForm(model))
+		}
+
+		if values.Get("password") == "" {
+			model.Errors["password"] = "Mot de passe obligatoire"
+			return Render(c, 422, views.ResetPasswordForm(model))
+		}
+
+		updatePassword := db.UpdatePasswordParams{
+			ID: *userID,
+		}
+
+		if err := auth.CreateHash(c.FormValue("password"), &updatePassword); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to hash password")
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.ResetPasswordForm(model))
+		}
+
+		if err := queries.UpdatePassword(c.Request().Context(), updatePassword); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to update password")
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.ResetPasswordForm(model))
+		}
+
+		if err := addAuthenticationCookie(c, *userID); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
+			model.Errors["form"] = "Erreur inatendue"
+			return Render(c, 422, views.ResetPasswordForm(model))
+		}
+
+		return Redirect(c, "/user/")
+	})
+
 	e.GET("/logout", func(c echo.Context) error {
 		c.SetCookie(createCookie("", -1))
 		return RedirectWitQuery(c, "/login")
 	})
+}
+
+func addAuthenticationCookie(c echo.Context, userID uuid.UUID) error {
+	token, err := auth.CreateToken(userID, auth.AuthAudience)
+	if err != nil {
+		return fmt.Errorf("unable to create authentication token: %w", err)
+	}
+
+	c.SetCookie(createCookie(token, MAX_AGE))
+	return nil
 }
 
 func createCookie(token string, maxAge int) *http.Cookie {
@@ -278,7 +423,7 @@ func createCookie(token string, maxAge int) *http.Cookie {
 }
 
 func sendVerificationMail(c echo.Context, user db.User) error {
-	mailVerifToken, err := auth.CreateToken(user, auth.EmailVerificationAudience)
+	mailVerifToken, err := auth.CreateToken(user.ID, auth.EmailVerificationAudience)
 	if err != nil {
 		return fmt.Errorf("unable to create email verification token: %w", err)
 	}

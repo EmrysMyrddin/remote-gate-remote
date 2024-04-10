@@ -30,19 +30,9 @@ func init() {
 	}
 }
 
-func CreateToken(user db.User, audience audience) (string, error) {
-	userIDValue, err := user.ID.Value()
-	if err != nil {
-		return "", fmt.Errorf("unable to get user id: %w", err)
-	}
-
-	userID, ok := userIDValue.(string)
-	if !ok {
-		return "", errors.New("invalid user id")
-	}
-
+func CreateToken(userID uuid.UUID, audience audience) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.RegisteredClaims{
-		Subject:  userID,
+		Subject:  userID.String(),
 		Audience: jwt.ClaimStrings{string(audience)},
 		IssuedAt: &jwt.NumericDate{Time: time.Now()},
 	})
