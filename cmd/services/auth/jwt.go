@@ -45,14 +45,9 @@ func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err er
 		TokenLookup:            "cookie:authorization",
 		ContinueOnIgnoredError: true,
 		ParseTokenFunc: func(c echo.Context, tokenString string) (interface{}, error) {
-			userID, _, err := ParseToken(tokenString, AuthAudience)
+			user, err := ParseToken(queries, c, tokenString, WithAudience(AuthAudience))
 			if err != nil {
 				return nil, err
-			}
-
-			user, err := queries.GetUser(c.Request().Context(), *userID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve user from jwt: %w", err)
 			}
 
 			if !user.EmailVerified {
@@ -67,34 +62,36 @@ func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err er
 	})
 }
 
-func ParseToken(tokenString string, audience audience) (*uuid.UUID, *jwt.Token, error) {
+func ParseToken(queries *db.Queries, c echo.Context, tokenString string, rules ...TokenRule) (*db.User, error) {
 	token, err := jwt.Parse(tokenString, getJwtKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if !token.Valid {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token")}
-	}
-
-	audienceClaim, err := token.Claims.GetAudience()
-	if err != nil {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("missing token audience")}
-	} else if len(audienceClaim) != 1 {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token audience")}
-	} else if audienceClaim[0] != string(audience) {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token audience")}
+		return nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token")}
 	}
 
 	subject, err := token.Claims.GetSubject()
 	if err != nil {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("missing token subject")}
+		return nil, &echojwt.TokenError{Token: token, Err: errors.New("missing token subject")}
 	}
 
 	userID, err := uuid.Parse(subject)
 	if err != nil {
-		return nil, nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token subject uuid")}
+		return nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token subject uuid")}
 	}
-	return &userID, token, nil
+
+	user, err := queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		return nil, &echojwt.TokenError{Token: token, Err: errors.New("user not found")}
+	}
+
+	for _, rule := range rules {
+		if err := rule(&user, token); err != nil {
+			return nil, &echojwt.TokenError{Token: token, Err: err}
+		}
+	}
+	return &user, nil
 }
 
 func getJwtKey(token *jwt.Token) (interface{}, error) {
@@ -106,3 +103,35 @@ func getJwtKey(token *jwt.Token) (interface{}, error) {
 }
 
 type audience string
+
+type TokenRule func(user *db.User, token *jwt.Token) error
+
+func WithAudience(audience audience) TokenRule {
+	return func(user *db.User, token *jwt.Token) error {
+		audienceClaim, err := token.Claims.GetAudience()
+		if err != nil {
+			return &echojwt.TokenError{Token: token, Err: errors.New("missing token audience")}
+		} else if len(audienceClaim) != 1 {
+			return &echojwt.TokenError{Token: token, Err: errors.New("invalid token audience")}
+		} else if audienceClaim[0] != string(audience) {
+			return &echojwt.TokenError{Token: token, Err: errors.New("invalid token audience")}
+		}
+
+		return nil
+	}
+}
+
+func IssuedAfterLastUserUpdate(allowedOverlapping time.Duration) TokenRule {
+	return func(user *db.User, token *jwt.Token) error {
+		issuedAt, err := token.Claims.GetIssuedAt()
+		if err != nil {
+			return &echojwt.TokenError{Token: token, Err: errors.New("missing token issued at")}
+		}
+
+		if issuedAt.Time.Before(user.UpdatedAt.Time.Add(-allowedOverlapping)) {
+			return &echojwt.TokenError{Token: token, Err: errors.New("missing token issued at")}
+		}
+
+		return nil
+	}
+}

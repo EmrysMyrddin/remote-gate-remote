@@ -163,15 +163,18 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 200, views.VerifyPage(nil))
 		}
 
-		userID, token, err := auth.ParseToken(verificationToken, auth.EmailVerificationAudience)
+		user, err := auth.ParseToken(queries, c, verificationToken,
+			auth.WithAudience(auth.EmailVerificationAudience),
+			auth.IssuedAfterLastUserUpdate(2*time.Second),
+		)
 		if err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
 			return Render(c, 200, views.VerifyPage(err))
-		} else if *userID != currentUser.ID {
+		} else if user.ID != currentUser.ID {
 			logger.Log.Error().
 				Str("code", verificationToken).
 				Stringer("current_user", currentUser.ID).
-				Stringer("userID", userID).
+				Stringer("userID", user.ID).
 				Msg("User ID does not match during email verification")
 			return RedirectWitQuery(c, "/logout")
 		}
@@ -180,17 +183,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Redirect(c, "/user/")
 		}
 
-		issuedAt, err := token.Claims.GetIssuedAt()
-		if err != nil {
-			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
-			return Render(c, 200, views.VerifyPage(err))
-		} else if currentUser.UpdatedAt.Time.Add(-2 * time.Second).After(issuedAt.Time) {
-			err = errors.New("token expired")
-			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
-			return Render(c, 200, views.VerifyPage(err))
-		}
-
-		if err = queries.EmailVerified(c.Request().Context(), *userID); err != nil {
+		if err = queries.EmailVerified(c.Request().Context(), user.ID); err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
 			return Render(c, 200, views.VerifyPage(err))
 		}
@@ -318,14 +311,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return RedirectWitQuery(c, "/password-forgotten")
 		}
 
-		userID, _, err := auth.ParseToken(code, auth.ResetPasswordAudience)
-		if err != nil {
-			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
-			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
-		}
-
-		_, err = queries.GetUser(c.Request().Context(), *userID)
-		if err != nil {
+		if _, err := auth.ParseToken(queries, c, code,
+			auth.WithAudience(auth.ResetPasswordAudience),
+			auth.IssuedAfterLastUserUpdate(0),
+		); err != nil {
 			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
 			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
 		}
@@ -339,13 +328,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return RedirectWitQuery(c, "/password-forgotten")
 		}
 
-		userID, _, err := auth.ParseToken(code, auth.ResetPasswordAudience)
-		if err != nil {
-			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
-			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
-		}
-
-		_, err = queries.GetUser(c.Request().Context(), *userID)
+		user, err := auth.ParseToken(queries, c, code,
+			auth.WithAudience(auth.ResetPasswordAudience),
+			auth.IssuedAfterLastUserUpdate(0),
+		)
 		if err != nil {
 			logger.Log.Error().Str("code", code).Err(err).Msg("Unable to reset password")
 			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
@@ -373,7 +359,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		}
 
 		updatePassword := db.UpdatePasswordParams{
-			ID: *userID,
+			ID: user.ID,
 		}
 
 		if err := auth.CreateHash(c.FormValue("password"), &updatePassword); err != nil {
@@ -388,7 +374,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
 
-		if err := addAuthenticationCookie(c, *userID); err != nil {
+		if err := addAuthenticationCookie(c, user.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
 			model.Errors["form"] = "Erreur inatendue"
 			return Render(c, 422, views.ResetPasswordForm(model))
