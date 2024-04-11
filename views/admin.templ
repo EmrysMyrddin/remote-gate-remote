@@ -1,0 +1,35 @@
+package views
+
+type AdminFormModel struct {
+	Code   string
+	QrCode string
+	Err    error
+}
+
+templ AdminPage(model AdminFormModel) {
+	@html("Woody Wood Gate - Admin") {
+		@AdminForm(model)
+	}
+}
+
+templ AdminForm(model AdminFormModel) {
+	@authForm("Portail Connecté") {
+		<p class="text-lg my-4 text-center">Il est désormais possible d'ouvrir le portail à l'aide de votre téléphone.</p>
+		<p>Scannez ce QR code pour vous inscrire </p>
+		<img width="256" height="256" src={ model.QrCode } class="m-auto"/>
+		<p class="text-center">
+			Ou rendez-vous sur 
+			<br/>
+			<span class="text-blue-500">woody-wood-gate.cocaud.dev/register</span>
+			<br/>
+			et utilisez le code d'invitation
+			<strong>{ model.Code }</strong>.
+		</p>
+		@button(templ.Attributes{"class": "print:hidden"}) {
+			Générer un nouveau code
+		}
+		if model.Err != nil {
+			@formError(model.Err.Error())
+		}
+	}
+}

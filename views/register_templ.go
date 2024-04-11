@@ -10,7 +10,9 @@ import "context"
 import "io"
 import "bytes"
 
-func RegisterPage() templ.Component {
+import "net/url"
+
+func RegisterPage(code string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -29,7 +31,9 @@ func RegisterPage() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = RegisterForm(FormModel{}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = RegisterForm(FormModel{
+				Values: url.Values{"code": []string{code}},
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -93,6 +97,16 @@ func RegisterForm(model FormModel) templ.Component {
 			}
 			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
 				Label: "Email", Name: "email", Required: true, Type: "email",
+			}).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
+				Label: "Code d'invitation", Name: "code", Required: true,
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

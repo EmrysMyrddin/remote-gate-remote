@@ -286,7 +286,7 @@ func authForm(title string, attrs ...templ.Attributes) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" hx-post hx-swap=\"outerHTML\" hx-disabled-elt=\"button\" class=\"w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 [&amp;_button]:last-of-type:mt-4\"><h1 class=\"text-2xl mb-4 text-center\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" hx-post hx-swap=\"outerHTML\" hx-disabled-elt=\"button\" class=\"w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 [&amp;_button]:last-of-type:mt-4 print:shadow-none\"><h1 class=\"text-2xl mb-4 text-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

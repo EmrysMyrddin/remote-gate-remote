@@ -30,6 +30,29 @@ var (
 	emailRegex = regexp.MustCompile(`^.*@.*\..{2,}$`)
 )
 
+type RequireAuth struct {
+	*echo.Group
+}
+
+func RequireAuthGroup(e *echo.Echo) RequireAuth {
+	requireAuth := e.Group("")
+	requireAuth.Use(auth.JWTMiddleware(queries, func(c echo.Context, err error) error {
+		if errors.Is(err, auth.ErrEmailNotVerified) {
+			logger.Log.Debug().Err(err).Msg("not verified, redirecting to /verify")
+			RedirectWitQuery(c, "/verify")
+		} else if errors.Is(err, auth.ErrJWTMissing) {
+			logger.Log.Debug().Err(err).Msg("not logged in, redirecting to /login")
+			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Path()))
+		} else {
+			logger.Log.Debug().Err(err).Msg("invalid JWT, logging out")
+			Redirect(c, "/logout")
+		}
+		return err
+	}))
+
+	return RequireAuth{requireAuth}
+}
+
 func RegisterAuthHandlers(e *echo.Echo) {
 	authGroup := e.Group("")
 
@@ -44,7 +67,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		if ctx.IsAuthenticated(c) {
 			return RedirectWitQuery(c, "/user/")
 		}
-		return Render(c, 200, views.RegisterPage())
+		return Render(c, 200, views.RegisterPage(c.QueryParam("code")))
 	})
 
 	authGroup.GET("/login", func(c echo.Context) error {
@@ -64,6 +87,20 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		model := views.FormModel{
 			Values: values,
 			Errors: views.Errors{},
+		}
+
+		if values.Get("code") == "" {
+			model.Errors["code"] = "Code d'invitation obligatoire"
+			return Render(c, 422, views.RegisterForm(model))
+		} else if code, err := queries.GetRegistrationCode(c.Request().Context()); err != nil {
+			if err != pgx.ErrNoRows {
+				logger.Log.Error().Err(err).Msg("Unable to get registration code")
+				model.Errors["code"] = "Erreur inatendue"
+				return Render(c, 422, views.RegisterForm(model))
+			}
+		} else if values.Get("code") != code {
+			model.Errors["code"] = "Code d'invitation invalide"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		if values.Get("email") == "" {

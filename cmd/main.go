@@ -52,8 +52,11 @@ func main() {
 	model := handlers.NewModel()
 
 	handlers.RegisterAuthHandlers(e)
-	handlers.RegisterUserHandlers(e, &model, openChannel)
 	handlers.RegisterGateHandlers(e, &model, openChannel)
+
+	requireAuth := handlers.RequireAuthGroup(e)
+	handlers.RegisterUserHandlers(requireAuth, &model, openChannel)
+	handlers.RegisterAdminHandlers(requireAuth)
 
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

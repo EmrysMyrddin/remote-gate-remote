@@ -1,8 +1,12 @@
 package views
 
-templ RegisterPage() {
+import "net/url"
+
+templ RegisterPage(code string) {
 	@html("Woody Wood Gate - Inscription") {
-		@RegisterForm(FormModel{})
+		@RegisterForm(FormModel{
+			Values: url.Values{"code": []string{code}},
+		})
 		@authFooter() {
 			Vous avez déjà un compte ?
 			<br/>
@@ -15,6 +19,9 @@ templ RegisterForm(model FormModel) {
 	@authForm("Inscription") {
 		@field(FieldModel{FormModel: model,
 			Label: "Email", Name: "email", Required: true, Type: "email",
+		})
+		@field(FieldModel{FormModel: model,
+			Label: "Code d'invitation", Name: "code", Required: true,
 		})
 		@field(FieldModel{FormModel: model,
 			Label: "Mot de passe", Name: "password", Required: true, Type: "password",

@@ -119,6 +119,17 @@ func (q *Queries) EmailVerified(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getRegistrationCode = `-- name: GetRegistrationCode :one
+select code from "registration_code"
+`
+
+func (q *Queries) GetRegistrationCode(ctx context.Context) (string, error) {
+	row := q.db.QueryRow(ctx, getRegistrationCode)
+	var code string
+	err := row.Scan(&code)
+	return code, err
+}
+
 const getUser = `-- name: GetUser :one
 select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at from "users" where id = $1
 `
@@ -256,6 +267,15 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const setRegistrationCode = `-- name: SetRegistrationCode :exec
+insert into "registration_code" (id, code) values (1, $1) on conflict (id) do update set code = $1
+`
+
+func (q *Queries) SetRegistrationCode(ctx context.Context, code string) error {
+	_, err := q.db.Exec(ctx, setRegistrationCode, code)
+	return err
 }
 
 const updatePassword = `-- name: UpdatePassword :exec

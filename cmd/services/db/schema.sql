@@ -45,3 +45,14 @@ create table "logs" (
   user_id uuid not null references "users" (id),
   created_at timestamp not null default current_timestamp
 );
+
+create table "registration_code" (
+  id smallint primary key default 1,
+  code varchar(255) not null,
+  updated_at timestamp not null default current_timestamp
+);
+
+CREATE TRIGGER trigger_updated_at_registration_code
+  BEFORE UPDATE ON "registration_code"
+  FOR EACH ROW
+  EXECUTE PROCEDURE trigger_set_timestamp ();

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -52,11 +53,13 @@ func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err er
 
 			if !user.EmailVerified {
 				// Manually set the user in the context to allow using unverified users in auth handlers
-				c.Set("user", user)
+				c.Set("user", *user)
 				return nil, ErrEmailNotVerified
 			}
 
-			return user, nil
+			logger.Log.Debug().Stringer("user.ID", user.ID).Msg("authenticated")
+
+			return *user, nil
 		},
 		ErrorHandler: errorHandler,
 	})

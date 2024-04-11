@@ -15,6 +15,12 @@ type Log struct {
 	CreatedAt pgtype.Timestamp
 }
 
+type RegistrationCode struct {
+	ID        int16
+	Code      string
+	UpdatedAt pgtype.Timestamp
+}
+
 type UsedToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID

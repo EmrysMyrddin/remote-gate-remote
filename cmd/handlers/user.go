@@ -1,27 +1,14 @@
 package handlers
 
 import (
-	"errors"
-	"net/url"
 	"woody-wood-portail/cmd/ctx"
-	"woody-wood-portail/cmd/services/auth"
 	"woody-wood-portail/views"
 
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterUserHandlers(e *echo.Echo, model *Model, openChannel chan struct{}) {
-	userRoutes := e.Group("/user")
-	userRoutes.Use(auth.JWTMiddleware(queries, func(c echo.Context, err error) error {
-		if errors.Is(err, auth.ErrEmailNotVerified) {
-			RedirectWitQuery(c, "/verify")
-		} else if errors.Is(err, auth.ErrJWTMissing) {
-			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Path()))
-		} else {
-			Redirect(c, "/logout")
-		}
-		return err
-	}))
+func RegisterUserHandlers(e RequireAuth, model *Model, openChannel chan struct{}) {
+	userRoutes := e.Group.Group("/user")
 
 	userHandler := func(c echo.Context) error {
 		return Render(c, 200, views.UserPage(len(model.Gates) > 0))

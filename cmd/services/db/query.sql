@@ -35,3 +35,9 @@ select * from "logs";
 
 -- name: ListLogsByUser :many
 select * from "logs" where user_id = $1;
+
+-- name: GetRegistrationCode :one
+select code from "registration_code";
+
+-- name: SetRegistrationCode :exec
+insert into "registration_code" (id, code) values (1, $1) on conflict (id) do update set code = $1;

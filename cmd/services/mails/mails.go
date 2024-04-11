@@ -29,6 +29,13 @@ func init() {
 	if SENDER.Name == "" {
 		SENDER.Name = "Woody Wood Gate"
 	}
+
+	if API_KEY == "" {
+		logger.Log.Fatal().Msg("MAILJET_API_KEY is not set in the environment variables")
+	}
+	if SECRET_KEY == "" {
+		logger.Log.Fatal().Msg("MAILJET_API_KEY or MAILJET_SECRET_KEY is not set in the environment variables")
+	}
 }
 
 func SendMail(c echo.Context, recipient db.User, subject string, body templ.Component) error {
