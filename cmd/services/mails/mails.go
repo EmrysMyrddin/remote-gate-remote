@@ -12,12 +12,9 @@ import (
 	"github.com/mailjet/mailjet-apiv3-go/v4"
 )
 
-const (
-	API_KEY    = "a2cc6295a4a83aee7c5065585c65dc88"
-	SECRET_KEY = "2233d2c971a933f6a51bb2cd638076a9"
-)
-
 var (
+	API_KEY       = os.Getenv("MAILJET_API_KEY")
+	SECRET_KEY    = os.Getenv("MAILJET_SECRET_KEY")
 	mailjetClient = mailjet.NewMailjetClient(API_KEY, SECRET_KEY)
 	SENDER        = &mailjet.RecipientV31{
 		Email: os.Getenv("MAIL_SENDER_ADDRESS"),
