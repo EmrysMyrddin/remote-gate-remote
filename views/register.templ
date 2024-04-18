@@ -2,6 +2,15 @@ package views
 
 import "net/url"
 
+type RegisterFormValues struct {
+	Email          string `form:"Email"          tr:"Email"                        validate:"required,email,uniq_email"`
+	InvitationCode string `form:"InvitationCode" tr:"Code d'invitation"            validate:"required,len=6,number,invitation_code"`
+	Password       string `form:"Password"       tr:"Mot de passe"                 validate:"required,min=16"`
+	Confirm        string `form:"Confirm"        tr:"Confirmation du mot de passe" validate:"required,eqfield=Password"`
+	FullName       string `form:"FullName"       tr:"Nom complet"                  validate:"required"`
+	Apartment      string `form:"Apartment"      tr:"Appartement"                  validate:"required,len=4,apartment"`
+}
+
 templ RegisterPage(code string) {
 	@html("Woody Wood Gate - Inscription") {
 		@RegisterForm(FormModel{
@@ -16,29 +25,28 @@ templ RegisterPage(code string) {
 }
 
 templ RegisterForm(model FormModel) {
-	@authForm("Inscription") {
+	@authForm("Inscription", model) {
 		@field(FieldModel{FormModel: model,
-			Label: "Email", Name: "email", Required: true, Type: "email",
+			Label: "Email", Name: "Email", Required: true, //Type: "email",
 		})
 		@field(FieldModel{FormModel: model,
-			Label: "Code d'invitation", Name: "code", Required: true,
+			Label: "Code d'invitation", Name: "InvitationCode", Required: true,
 		})
 		@field(FieldModel{FormModel: model,
-			Label: "Mot de passe", Name: "password", Required: true, Type: "password",
+			Label: "Mot de passe", Name: "Password", Required: true, Type: "password",
 		})
 		@field(FieldModel{FormModel: model,
-			Label: "Confirmation", Name: "confirm", Required: true, Type: "password",
+			Label: "Confirmation", Name: "Confirm", Required: true, Type: "password",
 		})
 		<hr class="m-4"/>
 		@field(FieldModel{FormModel: model,
-			Label: "Nom complet", Name: "fullName", Required: true,
+			Label: "Nom complet", Name: "FullName", Required: true,
 		})
 		@field(FieldModel{FormModel: model,
-			Label: "Numéro d'appartement (ex: A001)", Name: "apartment", Required: true,
+			Label: "Numéro d'appartement (ex: A001)", Name: "Apartment", Required: true,
 		})
 		@button(templ.Attributes{"type": "submit"}) {
 			S'inscrire
 		}
-		@formError(model.Errors["form"])
 	}
 }

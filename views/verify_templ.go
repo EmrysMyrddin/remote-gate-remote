@@ -15,11 +15,11 @@ import (
 )
 
 type VerifyModel struct {
-	Err       error
+	Err       string
 	EmailSent bool
 }
 
-func VerifyPage(err error) templ.Component {
+func VerifyPage(err string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -38,7 +38,9 @@ func VerifyPage(err error) templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			templ_7745c5c3_Err = VerifyForm(VerifyModel{}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = VerifyForm(VerifyModel{
+				Err: err,
+			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -100,20 +102,14 @@ func VerifyForm(model VerifyModel) templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			if model.Err != nil {
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<p class=\"text-red-500\">Le code de vérification est invalide, veuillez réssayer.</p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" <p class=\"text-center\">Vous devez vérifier votre adresse email.</p><p class=\"text-sm\">Un mail de vérification vous a été envoyé à l'adresse <strong>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<p class=\"text-center\">Vous devez vérifier votre adresse email.</p><p class=\"text-sm\">Un mail de vérification vous a été envoyé à l'adresse <strong>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.GetUserFromTempl(ctx).Email)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/verify.templ`, Line: 32, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/verify.templ`, Line: 31, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -157,7 +153,7 @@ func VerifyForm(model VerifyModel) templ.Component {
 			}
 			return templ_7745c5c3_Err
 		})
-		templ_7745c5c3_Err = authForm("Verification d'email", templ.Attributes{"hx-post": "/reset-verification"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = authForm("Verification d'email", NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

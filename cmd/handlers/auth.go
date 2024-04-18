@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
 	"time"
 	"woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/logger"
@@ -17,6 +17,7 @@ import (
 	"woody-wood-portail/views/emails"
 
 	"github.com/a-h/templ"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
@@ -24,10 +25,6 @@ import (
 
 const (
 	MAX_AGE = int(time.Hour * 24 * 7 * 4) // 1 month
-)
-
-var (
-	emailRegex = regexp.MustCompile(`^.*@.*\..{2,}$`)
 )
 
 type RequireAuth struct {
@@ -78,87 +75,28 @@ func RegisterAuthHandlers(e *echo.Echo) {
 	})
 
 	authGroup.POST("/register", func(c echo.Context) error {
-		values, err := c.FormParams()
+		values, rawValues, err := Bind[views.RegisterFormValues](c)
 		if err != nil {
-			return Render(c, 422, views.RegisterForm(views.FormModel{
-				Errors: views.Errors{"form": "Erreur inatendue"},
-			}))
-		}
-		model := views.FormModel{
-			Values: values,
-			Errors: views.Errors{},
+			return Render(c, 422, views.RegisterForm(views.NewFormError("Erreur inatendue")))
 		}
 
-		if values.Get("code") == "" {
-			model.Errors["code"] = "Code d'invitation obligatoire"
-			return Render(c, 422, views.RegisterForm(model))
-		} else if code, err := queries.GetRegistrationCode(c.Request().Context()); err != nil {
-			if err != pgx.ErrNoRows {
-				logger.Log.Error().Err(err).Msg("Unable to get registration code")
-				model.Errors["code"] = "Erreur inatendue"
-				return Render(c, 422, views.RegisterForm(model))
-			}
-		} else if values.Get("code") != code {
-			model.Errors["code"] = "Code d'invitation invalide"
-			return Render(c, 422, views.RegisterForm(model))
-		}
+		model := views.NewFormModel(rawValues, Validate(c, values))
 
-		if values.Get("email") == "" {
-			model.Errors["email"] = "Email obligatoire"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-		if !emailRegex.MatchString(values.Get("email")) {
-			model.Errors["email"] = "Email invalide"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-
-		_, err = queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
-		if err == nil {
-			logger.Log.Info().Err(err).Msg("Email already used")
-			model.Errors["email"] = "Email déjà utilisé"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-		if err != pgx.ErrNoRows {
-			logger.Log.Error().Err(err).Msg("Unable to get user by email")
-			model.Errors["email"] = "Erreur inatendue"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-
-		if values.Get("password") == "" {
-			model.Errors["password"] = "Mot de passe obligatoire"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-
-		if values.Get("password") != values.Get("confirm") {
-			model.Errors["confirm"] = "Les mots de passes ne correspondent pas"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-
-		if values.Get("fullName") == "" {
-			model.Errors["fullName"] = "Nom complet obligatoire"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-
-		apartment := strings.ToUpper(values.Get("apartment"))
-		if apartment == "" {
-			model.Errors["apartment"] = "Appartement obligatoire"
-			return Render(c, 422, views.RegisterForm(model))
-		}
-		if (!strings.HasPrefix(apartment, "A") && !strings.HasPrefix(apartment, "B")) || len(apartment) != 4 {
-			model.Errors["apartment"] = "Appartement invalide. Exemple: A001"
+		if len(model.Errors.Fields) > 0 {
+			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		createUserParams := db.CreateUserParams{
-			Email:     values.Get("email"),
-			FullName:  values.Get("fullName"),
-			Apartment: apartment,
+			Email:     values.Email,
+			FullName:  values.FullName,
+			Apartment: values.Apartment,
 		}
 
-		err = auth.CreateHash(values.Get("password"), &createUserParams)
+		err = auth.CreateHash(values.Password, &createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to hash password")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
@@ -166,21 +104,23 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		newUser, err := queries.CreateUser(c.Request().Context(), createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create user")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
+		logger.Log.Info().Stringer("user", newUser.ID).Msg("User created")
+
 		if err := addAuthenticationCookie(c, newUser.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
-			model.Errors["form"] = "Erreur inatendue"
-			return Render(c, 422, views.LoginForm(model))
+			// Redirect to login page to allow user to login, since we failed to set its auth cookie
+			return Redirect(c, "/login")
 		}
 
 		err = sendVerificationMail(c, newUser)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			model.Errors["form"] = "Erreur inatendue"
-			return Render(c, 422, views.RegisterForm(model))
+			// Redirect to the verification page to allow user to resend the email
+			return Redirect(c, "/verify")
 		}
 
 		return Redirect(c, "/verify")
@@ -197,7 +137,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			if currentUser.EmailVerified {
 				return Redirect(c, "/user/")
 			}
-			return Render(c, 200, views.VerifyPage(nil))
+			return Render(c, 200, views.VerifyPage(c.QueryParam("error")))
 		}
 
 		user, err := auth.ParseToken(queries, c, verificationToken,
@@ -206,7 +146,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		)
 		if err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
-			return Render(c, 200, views.VerifyPage(err))
+			return Render(c, 200, views.VerifyPage("Le code de vérification est invalide, veuillez réssayer."))
 		} else if user.ID != currentUser.ID {
 			logger.Log.Error().
 				Str("code", verificationToken).
@@ -222,8 +162,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		if err = queries.EmailVerified(c.Request().Context(), user.ID); err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
-			return Render(c, 200, views.VerifyPage(err))
+			return Render(c, 200, views.VerifyPage("Une erreur est survenue, veuillez réssayer."))
 		}
+
+		logger.Log.Info().Stringer("user", user.ID).Msg("Email verified")
 
 		return Redirect(c, "/user/")
 	})
@@ -241,7 +183,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		err := sendVerificationMail(c, currentUser)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			return Render(c, 422, views.VerifyForm(views.VerifyModel{Err: err}))
+			return Render(c, 422, views.VerifyForm(views.VerifyModel{Err: "Une erreur est survenue, veuillez réssayer."}))
 		}
 
 		<-time.After(2 * time.Second)
@@ -250,36 +192,33 @@ func RegisterAuthHandlers(e *echo.Echo) {
 	})
 
 	authGroup.POST("/login", func(c echo.Context) error {
-		values, err := c.FormParams()
+		values, rawValues, err := Bind[views.LoginFormValues](c)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
-			return Render(c, 422, views.LoginForm(views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}}))
+			return Render(c, 422, views.LoginForm(views.NewFormError("Erreur inatendue")))
 		}
-		model := views.FormModel{
-			Values: values,
-			Errors: views.Errors{},
-		}
+		model := views.NewFormModel(rawValues, Validate(c, values))
 
-		user, err := queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
+		user, err := queries.GetUserByEmail(c.Request().Context(), values.Email)
 		if err != nil {
-			model.Errors["email"] = "Email invalide"
+			model.Errors.Fields["Email"] = "Cet email n'existe pas"
 			return Render(c, 422, views.LoginForm(model))
 		}
 
-		ok, err := auth.CompareHashAgainstPassword(user, values.Get("password"))
+		ok, err := auth.CompareHashAgainstPassword(user, values.Password)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to compare password")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.LoginForm(model))
 		}
 		if !ok {
-			model.Errors["password"] = "Mot de passe invalide"
+			model.Errors.Fields["Password"] = "Mot de passe invalide"
 			return Render(c, 422, views.LoginForm(model))
 		}
 
 		if err := addAuthenticationCookie(c, user.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.LoginForm(model))
 		}
 
@@ -301,30 +240,31 @@ func RegisterAuthHandlers(e *echo.Echo) {
 	})
 
 	authGroup.POST("/password-forgotten", func(c echo.Context) error {
-		values, err := c.FormParams()
+		values, rawValues, err := Bind[views.PasswordForgottenFormValues](c)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
 			return Render(c, 422, views.PasswordForgottenForm(views.PasswordForgottenModel{
-				FormModel: views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}},
+				FormModel: views.NewFormError("Erreur inatendue"),
 			}))
 		}
-		model := views.PasswordForgottenModel{
-			FormModel: views.FormModel{
-				Values: values,
-				Errors: views.Errors{},
-			},
+
+		model := views.PasswordForgottenModel{FormModel: views.NewFormModel(rawValues, Validate(c, values))}
+
+		if len(model.Errors.Fields) > 0 {
+			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
+			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
-		user, err := queries.GetUserByEmail(c.Request().Context(), values.Get("email"))
+		user, err := queries.GetUserByEmail(c.Request().Context(), values.Email)
 		if err != nil {
-			model.Errors["email"] = "Email invalide"
+			model.Errors.Fields["Email"] = "Cet email n'existe pas"
 			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
 		resetToken, err := auth.CreateToken(user.ID, auth.ResetPasswordAudience)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create reset token")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
@@ -335,11 +275,13 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send password reset email")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
-		return Render(c, 200, views.PasswordForgottenForm(views.PasswordForgottenModel{EmailSent: true}))
+		model.EmailSent = true
+
+		return Render(c, 200, views.PasswordForgottenForm(model))
 	})
 
 	authGroup.GET("/reset-password", func(c echo.Context) error {
@@ -374,46 +316,39 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Redirect(c, "/password-forgotten?error="+url.QueryEscape("Code de réinitialisation invalide"))
 		}
 
-		values, err := c.FormParams()
+		values, rawValues, err := Bind[views.ResetPasswordFormValues](c)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
-			return Render(c, 422, views.ResetPasswordForm(views.FormModel{Errors: views.Errors{"form": "Erreur inatendue"}}))
+			return Render(c, 422, views.ResetPasswordForm(views.NewFormError("Erreur inatendue")))
 		}
 
-		model := views.FormModel{
-			Values: values,
-			Errors: views.Errors{},
-		}
-
-		if values.Get("password") != values.Get("confirm") {
-			model.Errors["confirm"] = "Les mots de passes ne correspondent pas"
+		model := views.NewFormModel(rawValues, Validate(c, values))
+		if len(model.Errors.Fields) > 0 {
+			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
 
-		if values.Get("password") == "" {
-			model.Errors["password"] = "Mot de passe obligatoire"
-			return Render(c, 422, views.ResetPasswordForm(model))
-		}
-
-		updatePassword := db.UpdatePasswordParams{
+		updatePasswordParams := db.UpdatePasswordParams{
 			ID: user.ID,
 		}
 
-		if err := auth.CreateHash(c.FormValue("password"), &updatePassword); err != nil {
+		if err := auth.CreateHash(values.Password, &updatePasswordParams); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to hash password")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
 
-		if err := queries.UpdatePassword(c.Request().Context(), updatePassword); err != nil {
+		if err := queries.UpdatePassword(c.Request().Context(), updatePasswordParams); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to update password")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
+
+		logger.Log.Info().Stringer("user", user.ID).Msg("Password reset")
 
 		if err := addAuthenticationCookie(c, user.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
-			model.Errors["form"] = "Erreur inatendue"
+			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
 
@@ -461,4 +396,39 @@ func sendVerificationMail(c echo.Context, user db.User) error {
 	}
 
 	return nil
+}
+
+func init() {
+	customValidations["uniq_email"] = CustomValidation{
+		Message: "Un compte utilisant cet email existe déjà",
+		ValidateCtx: func(c context.Context, fl validator.FieldLevel) bool {
+			_, err := queries.GetUserByEmail(c, fl.Field().String())
+			if errors.Is(err, pgx.ErrNoRows) {
+				return true
+			} else {
+				logger.Log.Error().Err(err).Msg("Unable to get user by email")
+				return false
+			}
+		},
+	}
+
+	apartmentRegex := regexp.MustCompile(`^[AB][0-4][0-1][0-9]$`)
+	customValidations["apartment"] = CustomValidation{
+		Message: "Numéro d'appartement incorrect. (ex: A001)",
+		Validate: func(fl validator.FieldLevel) bool {
+			return apartmentRegex.MatchString(fl.Field().String())
+		},
+	}
+
+	customValidations["invitation_code"] = CustomValidation{
+		Message: "Code d'invitation invalide",
+		ValidateCtx: func(c context.Context, fl validator.FieldLevel) bool {
+			code, err := queries.GetRegistrationCode(c)
+			if err != nil {
+				logger.Log.Error().Err(err).Msg("Unable to get registration code")
+				return false
+			}
+			return fl.Field().String() == code
+		},
+	}
 }

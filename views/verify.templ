@@ -5,13 +5,15 @@ import (
 )
 
 type VerifyModel struct {
-	Err       error
+	Err       string
 	EmailSent bool
 }
 
-templ VerifyPage(err error) {
+templ VerifyPage(err string) {
 	@html("Woody Wood Gate - Verification d'email") {
-		@VerifyForm(VerifyModel{})
+		@VerifyForm(VerifyModel{
+			Err: err,
+		})
 		@authFooter() {
 			Ce n'est pas vous ? 
 			<br/>
@@ -21,10 +23,7 @@ templ VerifyPage(err error) {
 }
 
 templ VerifyForm(model VerifyModel) {
-	@authForm("Verification d'email", templ.Attributes{"hx-post": "/reset-verification"}) {
-		if model.Err != nil {
-			<p class="text-red-500">Le code de vérification est invalide, veuillez réssayer.</p>
-		}
+	@authForm("Verification d'email", NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}) {
 		<p class="text-center">
 			Vous devez vérifier votre adresse email.
 		</p>

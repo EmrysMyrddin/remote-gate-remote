@@ -11,6 +11,7 @@ import "io"
 import "bytes"
 
 import (
+	"github.com/go-playground/validator/v10"
 	"net/url"
 )
 
@@ -23,7 +24,10 @@ type FormModel struct {
 	Errors Errors
 }
 
-type Errors map[string]string
+type Errors struct {
+	Global string
+	Fields validator.ValidationErrorsTranslations
+}
 
 type FieldModel struct {
 	FormModel
@@ -32,6 +36,36 @@ type FieldModel struct {
 	Required bool
 	Type     string
 	Attrs    templ.Attributes
+}
+
+func NewFormError(message string, values ...url.Values) FormModel {
+	var v url.Values
+	if len(values) == 0 {
+		v = url.Values{}
+	} else {
+		v = values[0]
+	}
+	model := NewFormModel(v, nil)
+	model.Errors.Global = message
+	return model
+}
+
+func NewFormModel(values url.Values, fieldErrors validator.ValidationErrorsTranslations) FormModel {
+	model := FormModel{
+		Values: values,
+		Errors: Errors{
+			Fields: fieldErrors,
+		},
+	}
+
+	if model.Errors.Fields == nil {
+		model.Errors.Fields = validator.ValidationErrorsTranslations{}
+	}
+	if model.Values == nil {
+		model.Values = url.Values{}
+	}
+
+	return model
 }
 
 func field(model FieldModel) templ.Component {
@@ -48,7 +82,7 @@ func field(model FieldModel) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		var templ_7745c5c3_Var2 = []any{
-			templ.KV("border-red-500", model.Errors[model.Name] != ""),
+			templ.KV("border-red-500", model.Errors.Fields[model.Name] != ""),
 			"border rounded-sm py-1 px-3",
 			model.Attrs["class"],
 		}
@@ -63,7 +97,7 @@ func field(model FieldModel) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(model.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 29, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 63, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -76,7 +110,7 @@ func field(model FieldModel) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(model.Label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 30, Col: 27}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 64, Col: 27}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -113,7 +147,7 @@ func field(model FieldModel) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(model.Type)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 40, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 74, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -135,7 +169,7 @@ func field(model FieldModel) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(model.Values.Get(model.Name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 43, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 77, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -145,7 +179,7 @@ func field(model FieldModel) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = formError(model.Errors[model.Name]).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = formError(model.Errors.Fields[model.Name]).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -240,14 +274,14 @@ func formError(err string, attrs ...templ.Attributes) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" class=\"text-red-500\">")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" class=\"text-red-500 text-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(" " + err)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 66, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 100, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -265,7 +299,7 @@ func formError(err string, attrs ...templ.Attributes) templ.Component {
 	})
 }
 
-func authForm(title string, attrs ...templ.Attributes) templ.Component {
+func authForm(title string, model FormModel, attrs ...templ.Attributes) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -293,7 +327,7 @@ func authForm(title string, attrs ...templ.Attributes) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 79, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/form-components.templ`, Line: 113, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -304,6 +338,10 @@ func authForm(title string, attrs ...templ.Attributes) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = templ_7745c5c3_Var13.Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = formError(model.Errors.Global).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

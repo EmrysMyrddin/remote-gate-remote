@@ -3,7 +3,7 @@ package views
 type AdminFormModel struct {
 	Code   string
 	QrCode string
-	Err    error
+	Err    string
 }
 
 templ AdminPage(model AdminFormModel) {
@@ -13,7 +13,7 @@ templ AdminPage(model AdminFormModel) {
 }
 
 templ AdminForm(model AdminFormModel) {
-	@authForm("Portail Connecté") {
+	@authForm("Portail Connecté", NewFormError(model.Err)) {
 		<p class="text-lg my-4 text-center">Il est désormais possible d'ouvrir le portail à l'aide de votre téléphone.</p>
 		<p>Scannez ce QR code pour vous inscrire </p>
 		<img width="256" height="256" src={ model.QrCode } class="m-auto"/>
@@ -27,9 +27,6 @@ templ AdminForm(model AdminFormModel) {
 		</p>
 		@button(templ.Attributes{"class": "print:hidden"}) {
 			Générer un nouveau code
-		}
-		if model.Err != nil {
-			@formError(model.Err.Error())
 		}
 	}
 }

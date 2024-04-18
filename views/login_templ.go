@@ -10,6 +10,11 @@ import "context"
 import "io"
 import "bytes"
 
+type LoginFormValues struct {
+	Email    string `form:"Email"    tr:"Email"        validate:"required,email"`
+	Password string `form:"Password" tr:"Mot de passe" validate:"required"`
+}
+
 func LoginPage() templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
@@ -92,7 +97,7 @@ func LoginForm(model FormModel) templ.Component {
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
 			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
-				Label: "Email", Name: "email", Required: true,
+				Label: "Email", Name: "Email", Required: true,
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -102,7 +107,7 @@ func LoginForm(model FormModel) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = field(FieldModel{FormModel: model,
-				Label: "Mot de passe", Name: "password", Type: "password", Required: true,
+				Label: "Mot de passe", Name: "Password", Type: "password", Required: true,
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -130,20 +135,12 @@ func LoginForm(model FormModel) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = formError(model.Errors["form"]).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
 			if !templ_7745c5c3_IsBuffer {
 				_, templ_7745c5c3_Err = io.Copy(templ_7745c5c3_W, templ_7745c5c3_Buffer)
 			}
 			return templ_7745c5c3_Err
 		})
-		templ_7745c5c3_Err = authForm("Connexion").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = authForm("Connexion", model).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

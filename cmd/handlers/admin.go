@@ -25,33 +25,45 @@ func RegisterAdminHandlers(e RequireAuth) {
 }
 
 func adminPageHandler(c echo.Context) error {
+	var err error
 	model := views.AdminFormModel{}
-	model.Code, model.Err = queries.GetRegistrationCode(c.Request().Context())
-	if model.Err != nil && model.Err != pgx.ErrNoRows {
+	model.Code, err = queries.GetRegistrationCode(c.Request().Context())
+
+	if err != nil && err != pgx.ErrNoRows {
+		model.Err = err.Error()
 		return Render(c, 200, views.AdminPage(model))
 	}
 
-	model.QrCode, model.Err = invitationQrCodeHandler(model.Code)
+	model.QrCode, err = invitationQrCodeHandler(model.Code)
+	if err != nil {
+		model.Err = err.Error()
+	}
 
 	return Render(c, 200, views.AdminPage(model))
 }
 
 func adminFormHandler(c echo.Context) error {
+	var err error
 	model := views.AdminFormModel{}
-	model.Code, model.Err = queries.GetRegistrationCode(c.Request().Context())
-	if model.Err != nil && model.Err != pgx.ErrNoRows {
+	model.Code, err = queries.GetRegistrationCode(c.Request().Context())
+	if err != nil && err != pgx.ErrNoRows {
+		model.Err = err.Error()
 		return Render(c, 422, views.AdminForm(model))
 	}
 
 	newCode := fmt.Sprintf("%06d", rand.Int31n(899_999)+100_000)
 
-	if model.Err = queries.SetRegistrationCode(c.Request().Context(), newCode); model.Err != nil {
-		logger.Log.Error().Err(model.Err).Msg("Failed to set registration code")
+	if err = queries.SetRegistrationCode(c.Request().Context(), newCode); err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to set registration code")
+		model.Err = err.Error()
 		return Render(c, 422, views.AdminForm(model))
 	}
 
 	model.Code = newCode
-	model.QrCode, model.Err = invitationQrCodeHandler(newCode)
+	model.QrCode, err = invitationQrCodeHandler(newCode)
+	if err != nil {
+		model.Err = err.Error()
+	}
 	return Render(c, 200, views.AdminForm(model))
 }
 

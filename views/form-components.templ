@@ -2,6 +2,7 @@ package views
 
 import (
 	"net/url"
+	"github.com/go-playground/validator/v10"
 )
 
 var (
@@ -13,7 +14,10 @@ type FormModel struct {
 	Errors Errors
 }
 
-type Errors map[string]string
+type Errors struct {
+	Global string
+	Fields validator.ValidationErrorsTranslations
+}
 
 type FieldModel struct {
 	FormModel
@@ -24,12 +28,42 @@ type FieldModel struct {
 	Attrs    templ.Attributes
 }
 
+func NewFormError(message string, values ...url.Values) FormModel {
+	var v url.Values
+	if len(values) == 0 {
+		v = url.Values{}
+	} else {
+		v = values[0]
+	}
+	model := NewFormModel(v, nil)
+	model.Errors.Global = message
+	return model
+}
+
+func NewFormModel(values url.Values, fieldErrors validator.ValidationErrorsTranslations) FormModel {
+	model := FormModel{
+		Values: values,
+		Errors: Errors{
+			Fields: fieldErrors,
+		},
+	}
+
+	if model.Errors.Fields == nil {
+		model.Errors.Fields = validator.ValidationErrorsTranslations{}
+	}
+	if model.Values == nil {
+		model.Values = url.Values{}
+	}
+
+	return model
+}
+
 templ field(model FieldModel) {
 	<input
 		name={ model.Name }
 		placeholder={ model.Label }
 		class={
-			templ.KV("border-red-500", model.Errors[model.Name] != ""),
+			templ.KV("border-red-500", model.Errors.Fields[model.Name] != ""),
 			"border rounded-sm py-1 px-3",
 			model.Attrs["class"],
 		}
@@ -42,7 +76,7 @@ templ field(model FieldModel) {
 		{ model.Attrs... }
 		value={ model.Values.Get(model.Name) }
 	/>
-	@formError(model.Errors[model.Name])
+	@formError(model.Errors.Fields[model.Name])
 }
 
 templ button(attrs ...templ.Attributes) {
@@ -63,11 +97,11 @@ templ button(attrs ...templ.Attributes) {
 
 templ formError(err string, attrs ...templ.Attributes) {
 	if err != "" {
-		<span { expect1(attrs)... } class="text-red-500">{ " " + err }</span>
+		<span { expect1(attrs)... } class="text-red-500 text-center">{ " " + err }</span>
 	}
 }
 
-templ authForm(title string, attrs ...templ.Attributes) {
+templ authForm(title string, model FormModel, attrs ...templ.Attributes) {
 	<form
 		{ expect1(attrs)... }
 		hx-post
@@ -79,6 +113,7 @@ templ authForm(title string, attrs ...templ.Attributes) {
 			{ title }
 		</h1>
 		{ children... }
+		@formError(model.Errors.Global)
 	</form>
 }
 

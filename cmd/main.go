@@ -10,8 +10,8 @@ import (
 	"woody-wood-portail/cmd/handlers"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
-	"woody-wood-portail/views"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -45,7 +45,7 @@ func main() {
 	e.Static("/static", "static")
 
 	e.GET("/", func(c echo.Context) error {
-		return handlers.Render(c, 200, views.IndexPage())
+		return handlers.Redirect(c, "/login")
 	})
 
 	openChannel := make(chan struct{}, 1)
@@ -76,4 +76,12 @@ func main() {
 		logger.Log.Fatal().Err(err).Msg("Failed to gracefully shutdown")
 	}
 	logger.Log.Info().Msg("Server stopped")
+}
+
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
 }

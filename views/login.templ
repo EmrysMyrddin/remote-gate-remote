@@ -1,5 +1,10 @@
 package views
 
+type LoginFormValues struct {
+	Email    string `form:"Email"    tr:"Email"        validate:"required,email"`
+	Password string `form:"Password" tr:"Mot de passe" validate:"required"`
+}
+
 templ LoginPage() {
 	@html("Woody Wood Gate - Connexion") {
 		@LoginForm(FormModel{})
@@ -14,12 +19,12 @@ templ LoginPage() {
 }
 
 templ LoginForm(model FormModel) {
-	@authForm("Connexion") {
+	@authForm("Connexion", model) {
 		@field(FieldModel{FormModel: model,
-			Label: "Email", Name: "email", Required: true,
+			Label: "Email", Name: "Email", Required: true,
 		})
 		@field(FieldModel{FormModel: model,
-			Label: "Mot de passe", Name: "password", Type: "password", Required: true,
+			Label: "Mot de passe", Name: "Password", Type: "password", Required: true,
 		})
 		<a href="/password-forgotten" class="text-blue-500 text-xs text-end w-full">
 			Mot de passe oublié ?
@@ -27,6 +32,5 @@ templ LoginForm(model FormModel) {
 		@button(templ.Attributes{"type": "submit"}) {
 			Se connecter
 		}
-		@formError(model.Errors["form"])
 	}
 }
