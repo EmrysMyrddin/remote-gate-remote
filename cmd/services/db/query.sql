@@ -1,6 +1,9 @@
 -- name: ListUsers :many
 select * from "users";
 
+-- name: ListUsersByRole :many
+select * from "users" where role = $1;
+
 -- name: GetUser :one
 select * from "users" where id = $1;
 
@@ -8,15 +11,25 @@ select * from "users" where id = $1;
 select * from "users" where email = $1;
 
 -- name: CreateUser :one
-insert into "users" (email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, "role") 
+insert into "users" (email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, "role", registration_state) 
 values (
   $1, $2, $3, $4, $5, $6, $7, $8, $9,
-  (select (case when count(id) = 0 then 'admin' else 'user' end) role from "users")
+  (select (case when count(id) = 0 then 'admin' else 'user' end) role from "users"),
+  (select (case when count(id) = 0 then 'accepted' else 'new' end) registration_state from "users")
 ) 
 returning *;
 
 -- name: EmailVerified :exec
 update "users" set email_verified = true where id = $1;
+
+-- name: RegistrationPending :one
+update "users" set registration_state = 'pending' where id = $1 returning *;
+
+-- name: RegistrationAccepted :one
+update "users" set registration_state = 'accepted' where id = $1 returning *;;
+
+-- name: RegistrationRejected :one
+update "users" set registration_state = 'rejected' where id = $1 returning *;
 
 -- name: UpdatePassword :exec
 update "users" set pwd_salt = $2, pwd_hash = $3, pwd_iterations = $4, pwd_parallelism = $5, pwd_memory = $6, pwd_version = $7 where id = $1;

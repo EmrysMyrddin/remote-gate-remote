@@ -1,19 +1,88 @@
 package views
 
-type AdminFormModel struct {
+import (
+	"strings"
+	c "woody-wood-portail/cmd/ctx"
+	"woody-wood-portail/cmd/services/db"
+	components "woody-wood-portail/views/components"
+)
+
+type AdminInvitationFormModel struct {
 	Code   string
 	QrCode string
 	Err    string
 }
 
-templ AdminPage(model AdminFormModel) {
+type AdminUsersPageModel struct {
+	Users                []db.User
+	PendingRegistrations []db.User
+}
+
+templ adminPage() {
 	@html("Woody Wood Gate - Admin") {
-		@AdminForm(model)
+		<div class="h-dvh flex flex-col">
+			<div class="overflow-scroll p-2 flex-1">
+				{ children... }
+			</div>
+			@menu()
+		</div>
 	}
 }
 
-templ AdminForm(model AdminFormModel) {
-	@authForm("Portail Connecté", NewFormError(model.Err)) {
+templ AdminInvitationPage(model *AdminInvitationFormModel) {
+	@adminPage() {
+		@AdminInvitationForm(model)
+	}
+}
+
+templ AdminUsersPage(model *AdminUsersPageModel) {
+	@adminPage() {
+		@components.Card("Inscriptions en attentes") {
+			<ul id="registrations-list">
+				for _, user := range model.PendingRegistrations {
+					@AdminRegistrationRow(&AdminUserRowModel{User: user})
+				}
+			</ul>
+		}
+		@components.Card("Utilisateurs") {
+			<ul id="users-list">
+				for _, user := range model.Users {
+					@AdminUserRow(&AdminUserRowModel{User: user})
+				}
+			</ul>
+		}
+	}
+}
+
+type AdminUserRowModel struct {
+	User  db.User
+	Err   error
+	Attrs templ.Attributes
+}
+
+templ AdminRegistrationRow(model *AdminUserRowModel) {
+	<li { model.Attrs... } hx-swap="outerHTML" hx-target="this">
+		<div class="flex justify-between items-center">
+			<div>{ model.User.Apartment } : { model.User.FullName }</div>
+			<div class="flex gap-2">
+				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/accept" }>✅</button>
+				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/reject" }>❌</button>
+			</div>
+		</div>
+		if model.Err != nil {
+			<div class="text-red-500 text-xs">Une erreur est survenue : { model.Err.Error() }</div>
+		}
+	</li>
+}
+
+templ AdminUserRow(model *AdminUserRowModel) {
+	<li { model.Attrs... }>
+		{ model.User.FullName }
+	</li>
+}
+
+templ AdminInvitationForm(model *AdminInvitationFormModel) {
+	@components.AuthForm("Portail Connecté", components.NewFormError(model.Err)) {
 		<p class="text-lg my-4 text-center">Il est désormais possible d'ouvrir le portail à l'aide de votre téléphone.</p>
 		<p>Scannez ce QR code pour vous inscrire </p>
 		<img width="256" height="256" src={ model.QrCode } class="m-auto"/>
@@ -25,8 +94,29 @@ templ AdminForm(model AdminFormModel) {
 			et utilisez le code d'invitation
 			<strong>{ model.Code }</strong>.
 		</p>
-		@button(templ.Attributes{"class": "print:hidden"}) {
+		@components.Button(templ.Attributes{"class": "print:hidden"}) {
 			Générer un nouveau code
 		}
 	}
+}
+
+templ menu() {
+	<nav class="h-12 w-full">
+		<ul class="h-full w-full flex gap-2 items-center">
+			@menuItem("/admin/users") {
+				Utilisateurs
+			}
+			@menuItem("/admin/invitation") {
+				Code d'invitation
+			}
+		</ul>
+	</nav>
+}
+
+templ menuItem(link templ.SafeURL) {
+	<li class="flex-1 text-center">
+		<a href={ link } class={ templ.KV("font-bold", strings.HasPrefix(c.GetEchoFromTempl(ctx).Request().URL.Path, string(link))) }>
+			{ children... }
+		</a>
+	</li>
 }

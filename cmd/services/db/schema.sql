@@ -22,7 +22,8 @@ create table "users" (
   role varchar(255) not null default 'user',
   email_verified boolean not null default false,
   created_at timestamp not null default current_timestamp,
-  updated_at timestamp not null default current_timestamp
+  updated_at timestamp not null default current_timestamp,
+  registration_state varchar(100) not null default 'new'
 );
 create unique index users_email_key on "users" (email);
 

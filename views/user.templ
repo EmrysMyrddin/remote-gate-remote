@@ -1,7 +1,8 @@
 package views
 
 import (
-	c "woody-wood-portail/cmd/ctx"
+	c "woody-wood-portail/cmd/ctx/auth"
+	components "woody-wood-portail/views/components"
 )
 
 templ UserPage(isOnline bool) {
@@ -16,7 +17,7 @@ templ UserPage(isOnline bool) {
 					🔴 Le portail est actuellement <span class="text-red-500">déconnecté</span>
 				}
 			</p>
-			@button(templ.Attributes{"hx-get": "/user/open", "class": "my-8", "disabled": !isOnline}) {
+			@components.Button(templ.Attributes{"hx-get": "/user/open", "class": "my-8", "disabled": !isOnline}) {
 				Ouvrir le portail
 			}
 			<p>

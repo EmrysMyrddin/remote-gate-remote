@@ -8,12 +8,13 @@ import (
 	"net/url"
 	"regexp"
 	"time"
-	"woody-wood-portail/cmd/ctx"
+	ctx "woody-wood-portail/cmd/ctx/auth"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/auth"
 	"woody-wood-portail/cmd/services/db"
 	"woody-wood-portail/cmd/services/mails"
 	"woody-wood-portail/views"
+	components "woody-wood-portail/views/components"
 	"woody-wood-portail/views/emails"
 
 	"github.com/a-h/templ"
@@ -33,10 +34,13 @@ type RequireAuth struct {
 
 func RequireAuthGroup(e *echo.Echo) RequireAuth {
 	requireAuth := e.Group("")
-	requireAuth.Use(auth.JWTMiddleware(queries, func(c echo.Context, err error) error {
+	requireAuth.Use(auth.JWTMiddleware(func(c echo.Context, err error) error {
 		if errors.Is(err, auth.ErrEmailNotVerified) {
 			logger.Log.Debug().Err(err).Msg("not verified, redirecting to /verify")
 			RedirectWitQuery(c, "/verify")
+		} else if errors.Is(err, auth.ErrRegistrationNotAccepted) {
+			logger.Log.Debug().Err(err).Msg("registration not accepted, redirecting to /pending-registration")
+			RedirectWitQuery(c, "/pending-registration")
 		} else if errors.Is(err, auth.ErrJWTMissing) {
 			logger.Log.Debug().Err(err).Msg("not logged in, redirecting to /login")
 			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Path()))
@@ -53,8 +57,8 @@ func RequireAuthGroup(e *echo.Echo) RequireAuth {
 func RegisterAuthHandlers(e *echo.Echo) {
 	authGroup := e.Group("")
 
-	authGroup.Use(auth.JWTMiddleware(queries, func(c echo.Context, err error) error {
-		if !errors.Is(err, auth.ErrJWTMissing) && !errors.Is(errors.Unwrap(err), auth.ErrEmailNotVerified) {
+	authGroup.Use(auth.JWTMiddleware(func(c echo.Context, err error) error {
+		if !errors.Is(err, auth.ErrJWTMissing) && !errors.Is(err, auth.ErrEmailNotVerified) && !errors.Is(err, auth.ErrRegistrationNotAccepted) {
 			RedirectWitQuery(c, "/logout")
 		}
 		return nil
@@ -77,10 +81,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 	authGroup.POST("/register", func(c echo.Context) error {
 		values, rawValues, err := Bind[views.RegisterFormValues](c)
 		if err != nil {
-			return Render(c, 422, views.RegisterForm(views.NewFormError("Erreur inatendue")))
+			return Render(c, 422, views.RegisterForm(components.NewFormError("Erreur inatendue")))
 		}
 
-		model := views.NewFormModel(rawValues, Validate(c, values))
+		model := components.NewFormModel(rawValues, Validate(c, values))
 
 		if len(model.Errors.Fields) > 0 {
 			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
@@ -100,8 +104,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
-		// TODO: use a transaction
-		newUser, err := queries.CreateUser(c.Request().Context(), createUserParams)
+		newUser, err := db.Q(c).CreateUser(c.Request().Context(), createUserParams)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create user")
 			model.Errors.Global = "Erreur inatendue"
@@ -110,17 +113,22 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		logger.Log.Info().Stringer("user", newUser.ID).Msg("User created")
 
+		if err = sendVerificationMail(c, newUser); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send verification email")
+			// Redirect to the verification page to allow user to resend the email
+			return Redirect(c, "/verify")
+		}
+
 		if err := addAuthenticationCookie(c, newUser.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
 			// Redirect to login page to allow user to login, since we failed to set its auth cookie
 			return Redirect(c, "/login")
 		}
 
-		err = sendVerificationMail(c, newUser)
-		if err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			// Redirect to the verification page to allow user to resend the email
-			return Redirect(c, "/verify")
+		if err := db.Commit(c); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to commit transaction")
+			model.Errors.Global = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
 
 		return Redirect(c, "/verify")
@@ -140,7 +148,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 200, views.VerifyPage(c.QueryParam("error")))
 		}
 
-		user, err := auth.ParseToken(queries, c, verificationToken,
+		user, err := auth.ParseToken(c, verificationToken,
 			auth.WithAudience(auth.EmailVerificationAudience),
 			auth.IssuedAfterLastUserUpdate(2*time.Second),
 		)
@@ -160,8 +168,13 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Redirect(c, "/user/")
 		}
 
-		if err = queries.EmailVerified(c.Request().Context(), user.ID); err != nil {
+		if err = db.Q(c).EmailVerified(c.Request().Context(), user.ID); err != nil {
 			logger.Log.Error().Str("code", verificationToken).Err(err).Msg("Unable to verify user email")
+			return Render(c, 200, views.VerifyPage("Une erreur est survenue, veuillez réssayer."))
+		}
+
+		if err := db.Commit(c); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to commit transaction")
 			return Render(c, 200, views.VerifyPage("Une erreur est survenue, veuillez réssayer."))
 		}
 
@@ -195,11 +208,11 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		values, rawValues, err := Bind[views.LoginFormValues](c)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
-			return Render(c, 422, views.LoginForm(views.NewFormError("Erreur inatendue")))
+			return Render(c, 422, views.LoginForm(components.NewFormError("Erreur inatendue")))
 		}
-		model := views.NewFormModel(rawValues, Validate(c, values))
+		model := components.NewFormModel(rawValues, Validate(c, values))
 
-		user, err := queries.GetUserByEmail(c.Request().Context(), values.Email)
+		user, err := db.Q(c).GetUserByEmail(c.Request().Context(), values.Email)
 		if err != nil {
 			model.Errors.Fields["Email"] = "Cet email n'existe pas"
 			return Render(c, 422, views.LoginForm(model))
@@ -229,6 +242,35 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		return RedirectWitQuery(c, "/user/")
 	})
 
+	authGroup.GET("/pending-registration", func(c echo.Context) error {
+		if !ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/login")
+		}
+		currentUser := ctx.GetUserFromEcho(c)
+
+		if currentUser.RegistrationState == "accepted" {
+			return Redirect(c, "/user/")
+		}
+
+		if currentUser.RegistrationState == "rejected" {
+			return Render(c, 200, views.RejectedRegistrationPage())
+		}
+
+		if currentUser.RegistrationState == "new" {
+			if err := sendRegistrationRequestMail(c, currentUser); err != nil {
+				logger.Log.Error().Err(err).Msg("Unable to send registration request")
+				return Render(c, 200, views.FailedRegistrationPage())
+			}
+
+			if _, err := db.Q(c).RegistrationPending(c.Request().Context(), currentUser.ID); err != nil {
+				logger.Log.Error().Err(err).Msg("Unable to set registration state to pending")
+				return Render(c, 200, views.FailedRegistrationPage())
+			}
+		}
+
+		return Render(c, 200, views.PendingRegistrationPage())
+	})
+
 	authGroup.GET("/password-forgotten", func(c echo.Context) error {
 		resetError := c.QueryParam("error")
 		logger.Log.Info().Str("error", resetError).Msg("Password forgotten error")
@@ -244,18 +286,18 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
 			return Render(c, 422, views.PasswordForgottenForm(views.PasswordForgottenModel{
-				FormModel: views.NewFormError("Erreur inatendue"),
+				FormModel: components.NewFormError("Erreur inatendue"),
 			}))
 		}
 
-		model := views.PasswordForgottenModel{FormModel: views.NewFormModel(rawValues, Validate(c, values))}
+		model := views.PasswordForgottenModel{FormModel: components.NewFormModel(rawValues, Validate(c, values))}
 
 		if len(model.Errors.Fields) > 0 {
 			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
 			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
-		user, err := queries.GetUserByEmail(c.Request().Context(), values.Email)
+		user, err := db.Q(c).GetUserByEmail(c.Request().Context(), values.Email)
 		if err != nil {
 			model.Errors.Fields["Email"] = "Cet email n'existe pas"
 			return Render(c, 422, views.PasswordForgottenForm(model))
@@ -290,7 +332,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return RedirectWitQuery(c, "/password-forgotten")
 		}
 
-		if _, err := auth.ParseToken(queries, c, code,
+		if _, err := auth.ParseToken(c, code,
 			auth.WithAudience(auth.ResetPasswordAudience),
 			auth.IssuedAfterLastUserUpdate(0),
 		); err != nil {
@@ -307,7 +349,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return RedirectWitQuery(c, "/password-forgotten")
 		}
 
-		user, err := auth.ParseToken(queries, c, code,
+		user, err := auth.ParseToken(c, code,
 			auth.WithAudience(auth.ResetPasswordAudience),
 			auth.IssuedAfterLastUserUpdate(0),
 		)
@@ -319,10 +361,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		values, rawValues, err := Bind[views.ResetPasswordFormValues](c)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to get form params")
-			return Render(c, 422, views.ResetPasswordForm(views.NewFormError("Erreur inatendue")))
+			return Render(c, 422, views.ResetPasswordForm(components.NewFormError("Erreur inatendue")))
 		}
 
-		model := views.NewFormModel(rawValues, Validate(c, values))
+		model := components.NewFormModel(rawValues, Validate(c, values))
 		if len(model.Errors.Fields) > 0 {
 			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
 			return Render(c, 422, views.ResetPasswordForm(model))
@@ -338,7 +380,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.ResetPasswordForm(model))
 		}
 
-		if err := queries.UpdatePassword(c.Request().Context(), updatePasswordParams); err != nil {
+		if err := db.Q(c).UpdatePassword(c.Request().Context(), updatePasswordParams); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to update password")
 			model.Errors.Global = "Erreur inatendue"
 			return Render(c, 422, views.ResetPasswordForm(model))
@@ -398,11 +440,49 @@ func sendVerificationMail(c echo.Context, user db.User) error {
 	return nil
 }
 
+func sendRegistrationRequestMail(c echo.Context, user db.User) error {
+	admins, err := db.Q(c).ListUsersByRole(c.Request().Context(), "admin")
+	if err != nil {
+		return fmt.Errorf("unable to list admins: %w", err)
+	}
+
+	errs := make([]error, 0, len(admins))
+	for _, admin := range admins {
+		if err := mails.SendMail(c,
+			admin,
+			"Nouvelle demande d'inscription sur Woody Wood Gate",
+			emails.RegistrationRequest(user, templ.SafeURL(fmt.Sprintf("%s/admin", BASE_URL))),
+		); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	for _, err := range errs {
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send registration request")
+		}
+	}
+
+	if len(errs) == len(admins) {
+		return fmt.Errorf("unable to send registration request email: all mail tentative failed")
+	}
+
+	if err = mails.SendMail(c,
+		user,
+		"Demande d'inscription sur Woody Wood Gate",
+		emails.RegistrationRequestPending(user),
+	); err != nil {
+		logger.Log.Error().Err(err).Msg("Unable to send pending registration email")
+	}
+
+	return nil
+}
+
 func init() {
 	customValidations["uniq_email"] = CustomValidation{
 		Message: "Un compte utilisant cet email existe déjà",
 		ValidateCtx: func(c context.Context, fl validator.FieldLevel) bool {
-			_, err := queries.GetUserByEmail(c, fl.Field().String())
+			_, err := db.Qtempl(c).GetUserByEmail(c, fl.Field().String())
 			if errors.Is(err, pgx.ErrNoRows) {
 				return true
 			} else {
@@ -423,7 +503,11 @@ func init() {
 	customValidations["invitation_code"] = CustomValidation{
 		Message: "Code d'invitation invalide",
 		ValidateCtx: func(c context.Context, fl validator.FieldLevel) bool {
-			code, err := queries.GetRegistrationCode(c)
+			code, err := db.Qtempl(c).GetRegistrationCode(c)
+			if err == pgx.ErrNoRows {
+				logger.Log.Info().Msg("No registration code found, allowing registration")
+				return true
+			}
 			if err != nil {
 				logger.Log.Error().Err(err).Msg("Unable to get registration code")
 				return false

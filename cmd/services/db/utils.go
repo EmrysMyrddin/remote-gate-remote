@@ -1,5 +1,25 @@
 package db
 
+import (
+	"context"
+	"errors"
+
+	"woody-wood-portail/cmd/ctx"
+	"woody-wood-portail/cmd/logger"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/labstack/echo/v4"
+)
+
+const (
+	queriesContextKey string = "queries"
+)
+
+var (
+	pool *pgxpool.Pool
+)
+
 type Argon2Password struct {
 	Salt        string
 	Hash        string
@@ -29,4 +49,62 @@ func (u *UpdatePasswordParams) SetPassword(password Argon2Password) {
 	u.PwdParallelism = password.Parallelism
 	u.PwdMemory = password.Memory
 	u.PwdVersion = password.Version
+}
+
+func Connect() (*pgxpool.Pool, error) {
+	var err error
+	pool, err = pgxpool.New(context.Background(), "user=postgres dbname=gate password=postgres host=localhost")
+	if err != nil {
+		return nil, err
+	}
+	return pool, nil
+}
+
+type queriesWitTx struct {
+	queries *Queries
+	tx      pgx.Tx
+}
+
+func Q(c echo.Context) *Queries {
+	if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
+		return queries.queries
+	}
+
+	tx, err := pool.Begin(c.Request().Context())
+	if err != nil {
+		panic(err)
+	}
+	queries := New(tx)
+	c.Set(queriesContextKey, &queriesWitTx{queries, tx})
+	return queries
+}
+
+func Qtempl(templCtx context.Context) *Queries {
+	c := ctx.GetEchoFromTempl(templCtx)
+	return Q(c)
+}
+
+func Commit(c echo.Context) error {
+	if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
+		logger.Log.Debug().Msg("Committing transaction")
+		return queries.tx.Commit(c.Request().Context())
+	}
+	return errors.New("no transaction to commit")
+}
+
+func TransactionMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			defer func() {
+				if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
+					logger.Log.Warn().Msg("Transaction rolled back because it was not committed before the end of the request handling chain")
+					if err := queries.tx.Rollback(c.Request().Context()); err != nil {
+						logger.Log.Error().Err(err).Msg("Failed to rollback transaction")
+					}
+				}
+			}()
+
+			return next(c)
+		}
+	}
 }

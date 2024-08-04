@@ -1,0 +1,48 @@
+package views
+
+import (
+	c "woody-wood-portail/cmd/ctx/auth"
+	components "woody-wood-portail/views/components"
+)
+
+templ PendingRegistrationPage() {
+	@registrationPage("Inscription en attente") {
+		<p>
+			Votre demande d'inscription en tant que <span class="text-blue-500">{ c.GetUserFromTempl(ctx).FullName }</span>
+			a bien été prise en compte et sera bientot vérifiée par un membre du conseil syndical.
+		</p>
+	}
+}
+
+templ FailedRegistrationPage() {
+	@registrationPage("Inscription échouée") {
+		<p class="text-red-500 text-center">
+			Une erreur est survenue lors de votre inscription en tant que <span class="text-blue-500">{ c.GetUserFromTempl(ctx).FullName }</span>.
+		</p>
+		<p>
+			Veuillez recharger la page pour réessayer. Si le problème persiste, veuillez contacter le conseil syndical.
+		</p>
+	}
+}
+
+templ RejectedRegistrationPage() {
+	@registrationPage("Inscription refusée") {
+		<p>
+			Votre demande d'inscription en tant que <span class="text-blue-500">{ c.GetUserFromTempl(ctx).FullName }</span> à été refusée.
+			Si vous pensez qu'il s'agit d'une erreur, veuillez contacter un membre du conseil syndical.
+		</p>
+	}
+}
+
+templ registrationPage(title string) {
+	@html("Woody Wood Gate - " + title) {
+		@components.AuthForm(title, components.FormModel{}) {
+			{ children... }
+		}
+		@components.AuthFooter() {
+			Ce n'est pas vous ?
+			<br/>
+			<a href="/logout" class="text-blue-500">Se déconnecter</a>
+		}
+	}
+}

@@ -10,10 +10,3 @@ services:
       POSTGRES_DB: gate
     volumes:
       - ./cmd/services/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
-  gate:
-    build: .
-    ports:
-      - 8081:80
-    image: wood-wood-gate
-    environment:
-      GATE_SECRET: woody_wood_secret

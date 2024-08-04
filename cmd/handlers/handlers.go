@@ -4,8 +4,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"woody-wood-portail/cmd/ctx"
-	"woody-wood-portail/cmd/services/db"
+	ctx "woody-wood-portail/cmd/ctx/auth"
 
 	"github.com/a-h/templ"
 	"github.com/go-playground/locales/en"
@@ -22,8 +21,6 @@ var (
 )
 
 var (
-	queries *db.Queries
-
 	translator ut.Translator
 	validate   = validator.New()
 
@@ -64,7 +61,7 @@ func Bind[T any](c echo.Context) (*T, url.Values, error) {
 }
 
 func Validate(c echo.Context, v interface{}) validator.ValidationErrorsTranslations {
-	err := validate.StructCtx(c.Request().Context(), v)
+	err := validate.StructCtx(ctx.EchoToTemplContext(c), v)
 	if err == nil {
 		return nil
 	}
@@ -116,10 +113,6 @@ func (model Model) gateConnected() {
 
 func (model Model) gateDisconnected() {
 	<-model.Gates
-}
-
-func SetQueries(q *db.Queries) {
-	queries = q
 }
 
 type CustomValidation struct {

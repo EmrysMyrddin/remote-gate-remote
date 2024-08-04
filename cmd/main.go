@@ -12,7 +12,6 @@ import (
 	"woody-wood-portail/cmd/services/db"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
@@ -30,17 +29,17 @@ func init() {
 }
 
 func main() {
-	conn, err := pgx.Connect(context.Background(), "user=postgres dbname=gate password=postgres host=localhost")
+	pool, err := db.Connect()
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
-	defer conn.Close(context.Background())
-	handlers.SetQueries(db.New(conn))
+	defer pool.Close()
 
 	e := echo.New()
 
 	e.Use(logger.LoggerMiddleware())
 	e.Use(middleware.Recover())
+	e.Use(db.TransactionMiddleware())
 
 	e.Static("/static", "static")
 

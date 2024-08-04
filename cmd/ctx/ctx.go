@@ -2,41 +2,22 @@ package ctx
 
 import (
 	"context"
-	"woody-wood-portail/cmd/services/db"
 
 	"github.com/labstack/echo/v4"
 )
 
-type userContextKeyType string
+type echoContextKeyType string
 
-var userContextKey userContextKeyType = "user"
+var echoContextKey echoContextKeyType = "echo"
 
-func GetUserFromEcho(c echo.Context) db.User {
-	user, ok := c.Get("user").(db.User)
-	if !ok {
-		panic("User not found in context")
-	}
-	return user
+func WithEchoContext(c context.Context, ec echo.Context) context.Context {
+	return context.WithValue(c, echoContextKey, ec)
 }
 
-func IsAuthenticated(c echo.Context) bool {
-	_, ok := c.Get("user").(db.User)
-	return ok
-}
-
-func GetUserFromTempl(c context.Context) db.User {
-	user, ok := c.Value(userContextKey).(db.User)
+func GetEchoFromTempl(c context.Context) echo.Context {
+	ec, ok := c.Value(echoContextKey).(echo.Context)
 	if !ok {
-		panic("User not found in context")
+		panic("Echo context not found in context")
 	}
-	return user
-
-}
-
-func EchoToTemplContext(c echo.Context) context.Context {
-	user, ok := c.Get("user").(db.User)
-	if !ok {
-		return c.Request().Context()
-	}
-	return context.WithValue(context.Background(), userContextKey, user)
+	return ec
 }

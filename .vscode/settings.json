@@ -2,10 +2,7 @@
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
   },
-  "files.exclude": {
-    "cmd/services/db/*.go": true,
-    "views/**/*_templ.go": true
-  },
+  "files.exclude": {},
   "editor.quickSuggestions": {
     "strings": "on"
   },

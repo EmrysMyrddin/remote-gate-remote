@@ -1,7 +1,9 @@
 package handlers
 
 import (
-	"woody-wood-portail/cmd/ctx"
+	ctx "woody-wood-portail/cmd/ctx/auth"
+	"woody-wood-portail/cmd/logger"
+	"woody-wood-portail/cmd/services/db"
 	"woody-wood-portail/views"
 
 	"github.com/labstack/echo/v4"
@@ -17,13 +19,22 @@ func RegisterUserHandlers(e RequireAuth, model *Model, openChannel chan struct{}
 	userRoutes.GET("/", userHandler)
 
 	userRoutes.GET("/open", func(c echo.Context) error {
-		user := ctx.GetUserFromEcho(c)
-		queries.CreateLog(c.Request().Context(), user.ID)
-		if len(openChannel) == 0 {
-			openChannel <- struct{}{}
-			return c.String(200, "La porte s'ouvre")
+		if len(openChannel) != 0 {
+			return c.String(200, "La porte est déjà en train de s'ouvrir")
 		}
 
-		return c.String(200, "La porte est déjà en train de s'ouvrir")
+		user := ctx.GetUserFromEcho(c)
+		if _, err := db.Q(c).CreateLog(c.Request().Context(), user.ID); err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to create log")
+			return c.String(422, "Une érreur est survenue")
+		}
+
+		if err := db.Commit(c); err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to commit transaction")
+			return c.String(422, "Une érreur est survenue")
+		}
+
+		openChannel <- struct{}{}
+		return c.String(200, "La porte s'ouvre")
 	})
 }

@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	JWT_SECRET          = []byte(os.Getenv("JWT_SECRET"))
-	ErrEmailNotVerified = errors.New("email not verified")
-	ErrJWTMissing       = echojwt.ErrJWTMissing
+	JWT_SECRET                 = []byte(os.Getenv("JWT_SECRET"))
+	ErrEmailNotVerified        = errors.New("email not verified")
+	ErrRegistrationNotAccepted = errors.New("registration not accepted")
+	ErrJWTMissing              = echojwt.ErrJWTMissing
 
 	AuthAudience              = audience("auth")
 	EmailVerificationAudience = audience("email_verification")
@@ -41,12 +42,12 @@ func CreateToken(userID uuid.UUID, audience audience) (string, error) {
 	return token.SignedString([]byte(JWT_SECRET))
 }
 
-func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err error) error) echo.MiddlewareFunc {
+func JWTMiddleware(errorHandler func(c echo.Context, err error) error) echo.MiddlewareFunc {
 	return echojwt.WithConfig(echojwt.Config{
 		TokenLookup:            "cookie:authorization",
 		ContinueOnIgnoredError: true,
 		ParseTokenFunc: func(c echo.Context, tokenString string) (interface{}, error) {
-			user, err := ParseToken(queries, c, tokenString, WithAudience(AuthAudience))
+			user, err := ParseToken(c, tokenString, WithAudience(AuthAudience))
 			if err != nil {
 				return nil, err
 			}
@@ -57,6 +58,11 @@ func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err er
 				return nil, ErrEmailNotVerified
 			}
 
+			if user.RegistrationState != "accepted" {
+				c.Set("user", *user)
+				return nil, ErrRegistrationNotAccepted
+			}
+
 			logger.Log.Debug().Stringer("user.ID", user.ID).Msg("authenticated")
 
 			return *user, nil
@@ -65,7 +71,7 @@ func JWTMiddleware(queries *db.Queries, errorHandler func(c echo.Context, err er
 	})
 }
 
-func ParseToken(queries *db.Queries, c echo.Context, tokenString string, rules ...TokenRule) (*db.User, error) {
+func ParseToken(c echo.Context, tokenString string, rules ...TokenRule) (*db.User, error) {
 	token, err := jwt.Parse(tokenString, getJwtKey)
 	if err != nil {
 		return nil, err
@@ -84,7 +90,7 @@ func ParseToken(queries *db.Queries, c echo.Context, tokenString string, rules .
 		return nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token subject uuid")}
 	}
 
-	user, err := queries.GetUser(c.Request().Context(), userID)
+	user, err := db.Q(c).GetUser(c.Request().Context(), userID)
 	if err != nil {
 		return nil, &echojwt.TokenError{Token: token, Err: errors.New("user not found")}
 	}

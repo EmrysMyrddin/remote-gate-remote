@@ -1,0 +1,37 @@
+package emails
+
+import "woody-wood-portail/cmd/services/db"
+
+templ RegistrationRequest(user db.User, url templ.SafeURL) {
+	<h1>Nouvelle demande d'inscription</h1>
+	<p>
+		Un utilisateur a demandé à s'inscrire sur Woody Wood Gate : { user.FullName }.
+	</p>
+	<p>
+		<a href={ url }>Accedez au panneau d'adminstration pour vérifier cette demande.</a>
+	</p>
+	<p>
+		Si vous n'arrivez pas à cliquer sur le lien, copiez-collez l'adresse suivante dans votre navigateur : { string(url) }
+	</p>
+}
+
+templ RegistrationRequestPending(user db.User) {
+	<h1>Demande d'inscription en attente</h1>
+	<p>
+		Votre demande d'inscription à bien été prise en compte et sera bientot vérifiée par un membre du conseil syndical.
+	</p>
+}
+
+templ RegistrationRequestAccepted(user db.User) {
+	<h1>Demande d'inscription acceptée</h1>
+	<p>
+		Votre demande d'inscription à bien été acceptée. Vous pouvez désormais vous connecter à Woody Wood Gate.
+	</p>
+}
+
+templ RegistrationRequestRejected(user db.User) {
+	<h1>Demande d'inscription acceptée</h1>
+	<p>
+		Votre demande d'inscription à été rejetée. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter le conseil syndical.
+	</p>
+}

@@ -1,7 +1,8 @@
 package views
 
 import (
-	c "woody-wood-portail/cmd/ctx"
+	c "woody-wood-portail/cmd/ctx/auth"
+	components "woody-wood-portail/views/components"
 )
 
 type VerifyModel struct {
@@ -14,7 +15,7 @@ templ VerifyPage(err string) {
 		@VerifyForm(VerifyModel{
 			Err: err,
 		})
-		@authFooter() {
+		@components.AuthFooter() {
 			Ce n'est pas vous ? 
 			<br/>
 			<a href="/logout" class="text-blue-500">Se déconnecter</a>
@@ -23,7 +24,7 @@ templ VerifyPage(err string) {
 }
 
 templ VerifyForm(model VerifyModel) {
-	@authForm("Verification d'email", NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}) {
+	@components.AuthForm("Verification d'email", components.NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}) {
 		<p class="text-center">
 			Vous devez vérifier votre adresse email.
 		</p>
@@ -33,7 +34,7 @@ templ VerifyForm(model VerifyModel) {
 		if model.EmailSent {
 			<p class="text-green-500">Un nouveau lien de vérification vous a été envoyé</p>
 		}
-		@button(templ.Attributes{"type": "submit"}) {
+		@components.Button(templ.Attributes{"type": "submit"}) {
 			Renvoyer un mail
 		}
 	}

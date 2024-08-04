@@ -1,6 +1,9 @@
 package views
 
-import "net/url"
+import (
+"net/url"
+c "woody-wood-portail/views/components"
+)
 
 type RegisterFormValues struct {
 	Email          string `form:"Email"          tr:"Email"                        validate:"required,email,uniq_email"`
@@ -13,10 +16,10 @@ type RegisterFormValues struct {
 
 templ RegisterPage(code string) {
 	@html("Woody Wood Gate - Inscription") {
-		@RegisterForm(FormModel{
+		@RegisterForm(c.FormModel{
 			Values: url.Values{"code": []string{code}},
 		})
-		@authFooter() {
+		@c.AuthFooter() {
 			Vous avez déjà un compte ?
 			<br/>
 			<a href="/login" class="text-blue-500">Se connecter</a>
@@ -24,29 +27,34 @@ templ RegisterPage(code string) {
 	}
 }
 
-templ RegisterForm(model FormModel) {
-	@authForm("Inscription", model) {
-		@field(FieldModel{FormModel: model,
-			Label: "Email", Name: "Email", Required: true, //Type: "email",
+templ RegisterForm(model c.FormModel) {
+	@c.AuthForm("Inscription", model) {
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Email", Name: "Email", Required: true, Type: "email", Attrs: templ.Attributes{"autocomplete": "email"},
 		})
-		@field(FieldModel{FormModel: model,
-			Label: "Code d'invitation", Name: "InvitationCode", Required: true,
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Code d'invitation", Name: "InvitationCode", Required: true, Attrs: templ.Attributes{"autocomplete": "one-time-code"},
 		})
-		@field(FieldModel{FormModel: model,
-			Label: "Mot de passe", Name: "Password", Required: true, Type: "password",
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Mot de passe", Name: "Password", Required: true, Type: "password", Attrs: templ.Attributes{"autocomplete": "new-password"},
 		})
-		@field(FieldModel{FormModel: model,
-			Label: "Confirmation", Name: "Confirm", Required: true, Type: "password",
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Confirmation", Name: "Confirm", Required: true, Type: "password", Attrs: templ.Attributes{"autocomplete": "new-password"},
 		})
 		<hr class="m-4"/>
-		@field(FieldModel{FormModel: model,
-			Label: "Nom complet", Name: "FullName", Required: true,
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Nom complet", Name: "FullName", Required: true, Attrs: templ.Attributes{"autocomplete": "name"},
 		})
-		@field(FieldModel{FormModel: model,
-			Label: "Numéro d'appartement (ex: A001)", Name: "Apartment", Required: true,
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Numéro d'appartement (ex: A001)", Name: "Apartment", Required: true, Attrs: templ.Attributes{"maxlength": "4", "minlength": "3", "autocapitalize": "characters"},
 		})
-		@button(templ.Attributes{"type": "submit"}) {
+		@c.Button(templ.Attributes{"type": "submit"}) {
 			S'inscrire
 		}
+		<script>
+			document.querySelector("input[name=Apartment]").onchange = e => {
+				e.target.value = e.target.value.toUpperCase();
+			}
+		</script>
 	}
 }
