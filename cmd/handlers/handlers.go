@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	ctx "woody-wood-portail/cmd/ctx/auth"
+	"woody-wood-portail/cmd/logger"
 
 	"github.com/a-h/templ"
 	"github.com/go-playground/locales/en"
@@ -124,7 +125,7 @@ type CustomValidation struct {
 
 func init() {
 	if GATE_SECRET == "" {
-		GATE_SECRET = "dev_gate_secret"
+		logger.Log.Fatal().Msg("GATE_SECRET is required")
 	}
 
 	if BASE_URL == "" {

@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"time"
+
+	_ "time/tzdata" // Include TZ data into the binary
 )
 
 var tz *time.Location

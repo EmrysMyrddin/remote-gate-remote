@@ -40,7 +40,7 @@ func main() {
 	e.Use(logger.LoggerMiddleware())
 	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
 		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
-			logger.Log.Error().Err(err).Msg(string(stack))
+			logger.Log.Error().Err(err).Msg("request failed with panic\n" + string(stack))
 			return err
 		},
 	}))

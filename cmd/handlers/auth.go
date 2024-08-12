@@ -33,6 +33,9 @@ type RequireAuth struct {
 }
 
 func RequireAuthGroup(e *echo.Echo) RequireAuth {
+	e.GET("/panic", func(c echo.Context) error {
+		panic("Panic")
+	})
 	requireAuth := e.Group("")
 	requireAuth.Use(auth.JWTMiddleware(func(c echo.Context, err error) error {
 		if errors.Is(err, auth.ErrEmailNotVerified) {

@@ -1,4 +1,4 @@
-*
-!/go.*
-!cmd
-!views
+node_modules
+esp32
+tmp
+.env

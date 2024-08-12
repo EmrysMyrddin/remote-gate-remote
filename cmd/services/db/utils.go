@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"os"
 
 	"woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/logger"
@@ -52,11 +53,21 @@ func (u *UpdatePasswordParams) SetPassword(password Argon2Password) {
 }
 
 func Connect() (*pgxpool.Pool, error) {
-	var err error
-	pool, err = pgxpool.New(context.Background(), "user=postgres dbname=gate password=postgres host=localhost")
-	if err != nil {
-		return nil, err
+	connectionString := os.Getenv("DATABASE")
+	if connectionString == "" {
+		connectionString = "user=postgres dbname=gate password=postgres host=localhost"
 	}
+
+	var err error
+	pool, err = pgxpool.New(context.Background(), connectionString)
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("failed to create database pool")
+	}
+
+	if _, err := pool.Exec(context.Background(), "SELECT 1"); err != nil {
+		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
+	}
+
 	return pool, nil
 }
 
