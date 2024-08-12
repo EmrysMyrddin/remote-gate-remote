@@ -551,6 +551,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"htmx.org@npm:^1.9.12":
+  version: 1.9.12
+  resolution: "htmx.org@npm:1.9.12"
+  checksum: 10c0/c239a751621501cca35e49c32152b1b7edd1c4f217ef709e84f005346ea0dc0d156cf59b0da91a0dd0b62ddefa98d67945b31e361245c5a2c94cb1b1285fbd2a
+  languageName: node
+  linkType: hard
+
 "http-cache-semantics@npm:^4.1.1":
   version: 4.1.1
   resolution: "http-cache-semantics@npm:4.1.1"
@@ -1489,6 +1496,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "woody-wood-portail@workspace:."
   dependencies:
+    htmx.org: "npm:^1.9.12"
     tailwindcss: "npm:^3.4.7"
   languageName: unknown
   linkType: soft

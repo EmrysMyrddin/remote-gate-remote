@@ -1,10 +1,15 @@
 root = "."
 tmp_dir = "tmp"
 
+[proxy]
+enabled = true
+proxy_port = 8080
+app_port = 80
+
 [build]
 pre_cmd = [
   "cd cmd/services/db && sqlc generate",
-  "templ generate",
+  "TEMPL_EXPERIMENT=rawgo templ generate",
   "yarn build",
 ]
 cmd = "go build -o ./tmp/main cmd/*.go"

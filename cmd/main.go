@@ -38,7 +38,12 @@ func main() {
 	e := echo.New()
 
 	e.Use(logger.LoggerMiddleware())
-	e.Use(middleware.Recover())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+			logger.Log.Error().Err(err).Msg(string(stack))
+			return err
+		},
+	}))
 	e.Use(db.TransactionMiddleware())
 
 	e.Static("/static", "static")

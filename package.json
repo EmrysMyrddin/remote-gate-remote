@@ -13,5 +13,8 @@
   "devDependencies": {
     "tailwindcss": "^3.4.7"
   },
-  "packageManager": "yarn@4.1.1"
+  "packageManager": "yarn@4.1.1",
+  "dependencies": {
+    "htmx.org": "^1.9.12"
+  }
 }

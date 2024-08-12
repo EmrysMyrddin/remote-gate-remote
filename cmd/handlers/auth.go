@@ -43,7 +43,7 @@ func RequireAuthGroup(e *echo.Echo) RequireAuth {
 			RedirectWitQuery(c, "/pending-registration")
 		} else if errors.Is(err, auth.ErrJWTMissing) {
 			logger.Log.Debug().Err(err).Msg("not logged in, redirecting to /login")
-			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Path()))
+			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Request().URL.Path))
 		} else {
 			logger.Log.Debug().Err(err).Msg("invalid JWT, logging out")
 			Redirect(c, "/logout")

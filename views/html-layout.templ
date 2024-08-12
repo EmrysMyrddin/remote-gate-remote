@@ -10,23 +10,24 @@ templ html(title string) {
 				{ title }
 			</title>
 			<link href="/static/css/tailwind.css" rel="stylesheet"/>
-			<script>
-        document.addEventListener('DOMContentLoaded', function () {
-          document.body.addEventListener('htmx:beforeSwap', function (event) {
-            if (event.detail.xhr.status === 422) {
-              event.detail.shouldSwap = true
-              event.detail.isError = false
-            }
-          })
-        })
-      </script>
 		</head>
 		<body>
 			<p class="absolute top-2 right-2 text-sm text-blue-300 print:hidden">
 				<a href="mailto:v.cocaud+wwg@gmail.com">Besoin d'aide ?</a>
 			</p>
 			{ children... }
-			<script src="https://unpkg.com/htmx.org/dist/htmx.js"></script>
+			<script src="/static/js/htmx.min.js"></script>
+			<script>
+				htmx.on("htmx:responseError", function(event) {
+					alert(`Une erreur est survenue : [${event.detail.xhr.status}] ${event.detail.xhr.responseText}`)
+				})
+				htmx.on('htmx:beforeSwap', function (event) {
+					if (event.detail.xhr.status === 422) {
+						event.detail.shouldSwap = true
+						event.detail.isError = false
+					}
+				})
+			</script>
 		</body>
 	</html>
 }

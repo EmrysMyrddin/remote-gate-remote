@@ -21,7 +21,7 @@ templ LoginPage() {
 }
 
 templ LoginForm(model c.FormModel) {
-	@c.AuthForm("Connexion", model) {
+	@c.Form("Connexion", model, "POST") {
 		@c.Field(c.FieldModel{FormModel: model,
 			Label: "Email", Name: "Email", Type: "email", Required: true, Attrs: templ.Attributes{"autocomplete": "email"},
 		})

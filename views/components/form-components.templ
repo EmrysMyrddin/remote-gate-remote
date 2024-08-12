@@ -1,4 +1,4 @@
-package views
+package components
 
 import (
 	"github.com/go-playground/validator/v10"
@@ -25,7 +25,12 @@ type FieldModel struct {
 	Name     string
 	Required bool
 	Type     string
+	Default  string
 	Attrs    templ.Attributes
+}
+
+func (m FormModel) HasError() bool {
+	return m.Errors.Global != "" || len(m.Errors.Fields) > 0
 }
 
 func NewFormError(message string, values ...url.Values) FormModel {
@@ -59,23 +64,49 @@ func NewFormModel(values url.Values, fieldErrors validator.ValidationErrorsTrans
 }
 
 templ Field(model FieldModel) {
+	{{
+		value := model.Values.Get(model.Name)
+		if value == "" {
+			value = model.Default
+		}
+	}}
 	<input
-		name={ model.Name }
-		placeholder={ model.Label }
-		class={
-			templ.KV("border-red-500", model.Errors.Fields[model.Name] != ""),
-			"border rounded-sm py-1 px-3",
-			model.Attrs["class"],
-		}
-		if model.Required {
-			required
-		}
-		if model.Type != "" {
-			type={ model.Type }
-		}
-		{ model.Attrs... }
-		value={ model.Values.Get(model.Name) }
+		{ model.fieldAttrs()... }
+		value={ value }
 	/>
+	@FormError(model.Errors.Fields[model.Name])
+}
+
+type SelectFieldModel struct {
+	FieldModel
+	Options []SelectFieldOption
+}
+type SelectFieldOption struct {
+	Value string
+	Label string
+}
+
+templ SelectField(model SelectFieldModel) {
+	{{
+		value := model.Values.Get(model.Name)
+		if value == "" {
+			value = model.Default
+		}
+	}}
+	<select
+		{ model.fieldAttrs()... }
+	>
+		for _, option := range model.Options {
+			<option
+				value={ option.Value }
+				if value == option.Value {
+					selected
+				}
+			>
+				{ option.Label }
+			</option>
+		}
+	</select>
 	@FormError(model.Errors.Fields[model.Name])
 }
 
@@ -101,18 +132,16 @@ templ FormError(err string, attrs ...templ.Attributes) {
 	}
 }
 
-templ AuthForm(title string, model FormModel, attrs ...templ.Attributes) {
+templ Form(title string, model FormModel, method string, attrs ...templ.Attributes) {
 	@Card(title) {
 		<form
 			{ expect1(attrs)... }
-			hx-post
+			{ htmxMethod(method)... }
+			hx-target="closest .card"
 			hx-swap="outerHTML"
 			hx-disabled-elt="button"
 			class="flex flex-col gap-2 [&_button]:last-of-type:mt-4"
 		>
-			<h1 class="text-2xl mb-4 text-center">
-				{ title }
-			</h1>
 			{ children... }
 			@FormError(model.Errors.Global)
 		</form>
@@ -121,7 +150,7 @@ templ AuthForm(title string, model FormModel, attrs ...templ.Attributes) {
 
 templ Card(title string) {
 	<div
-		class="w-80 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 print:shadow-none"
+		class="card w-80 border border-gray-50 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 print:shadow-none"
 	>
 		<h1 class="text-2xl mb-4 text-center">
 			{ title }
@@ -134,4 +163,35 @@ templ AuthFooter(attrs ...templ.Attributes) {
 	<p { expect1(attrs)... } class="w-80 m-auto mt-10 text-center">
 		{ children... }
 	</p>
+}
+
+func (m FieldModel) fieldAttrs() templ.Attributes {
+	attrs := templ.Attributes{}
+	for k, v := range m.Attrs {
+		attrs[k] = v
+	}
+	attrs["name"] = m.Name
+	attrs["placeholder"] = m.Label
+	attrs["class"] = templ.CSSClasses{
+		templ.KV("border-red-500", m.Errors.Fields[m.Name] != ""),
+		"border rounded-sm py-1 px-3 w-full",
+		m.Attrs["class"],
+	}.String()
+	if m.Required {
+		attrs["required"] = true
+	}
+	if m.Type != "" {
+		attrs["type"] = m.Type
+	}
+	return attrs
+}
+
+func htmxMethod(method string) templ.Attributes {
+	attrs := templ.Attributes{}
+	if method != "" {
+		attrs["hx-"+method] = true
+	} else {
+		attrs["hx-post"] = true
+	}
+	return attrs
 }

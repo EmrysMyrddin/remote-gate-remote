@@ -24,7 +24,7 @@ templ VerifyPage(err string) {
 }
 
 templ VerifyForm(model VerifyModel) {
-	@components.AuthForm("Verification d'email", components.NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}) {
+	@components.Form("Verification d'email", components.NewFormError(model.Err), "POST", templ.Attributes{"hx-post": "/reset-verification"}) {
 		<p class="text-center">
 			Vous devez vérifier votre adresse email.
 		</p>

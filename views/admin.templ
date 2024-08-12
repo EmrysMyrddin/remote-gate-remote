@@ -14,8 +14,9 @@ type AdminInvitationFormModel struct {
 }
 
 type AdminUsersPageModel struct {
-	Users                []db.User
-	PendingRegistrations []db.User
+	Users    []db.User
+	Pending  []db.User
+	Rejected []db.User
 }
 
 templ adminPage() {
@@ -38,16 +39,29 @@ templ AdminInvitationPage(model *AdminInvitationFormModel) {
 templ AdminUsersPage(model *AdminUsersPageModel) {
 	@adminPage() {
 		@components.Card("Inscriptions en attentes") {
-			<ul id="registrations-list">
-				for _, user := range model.PendingRegistrations {
-					@AdminRegistrationRow(&AdminUserRowModel{User: user})
+			if len(model.Pending) == 0 {
+				<p class="text-center"><span class="text-3xl">😎</span><br/>Aucune inscription en attente</p>
+			}
+			<ul id="pending-list">
+				for _, user := range model.Pending {
+					@AdminPendingRow(&AdminUserRowModel{User: user})
 				}
 			</ul>
 		}
 		@components.Card("Utilisateurs") {
-			<ul id="users-list">
+			<ul id="accepted-list">
 				for _, user := range model.Users {
-					@AdminUserRow(&AdminUserRowModel{User: user})
+					@AdminAcceptedRow(&AdminUserRowModel{User: user})
+				}
+			</ul>
+		}
+		@components.Card("Inscriptions refusées") {
+			if len(model.Rejected) == 0 {
+				<p class="text-center"><span class="text-3xl">😇</span><br/>Aucune inscription refusée</p>
+			}
+			<ul id="rejected-list">
+				for _, user := range model.Rejected {
+					@AdminRejectedRow(&AdminUserRowModel{User: user})
 				}
 			</ul>
 		}
@@ -60,13 +74,108 @@ type AdminUserRowModel struct {
 	Attrs templ.Attributes
 }
 
-templ AdminRegistrationRow(model *AdminUserRowModel) {
+type AdminUserPageModel struct {
+	Form AdminUserFormModel
+	Logs []db.Log
+}
+
+type AdminUserFormModel struct {
+	components.FormModel
+	User db.User
+}
+
+type AdminUserValues struct {
+	Role      string `form:"Role"      tr:"Role"        validate:"required"`
+	Apartment string `form:"Apartment" tr:"Appartement" validate:"required,len=4,apartment"`
+	FullName  string `form:"FullName"  tr:"Nom complet" validate:"required"`
+	Email     string `form:"Email"     tr:"Email"       validate:"required,email"`
+}
+
+templ AdminUserPage(model *AdminUserPageModel) {
+	@adminPage() {
+		@AdminUserForm(&model.Form)
+		@AdminUserLogs(model)
+	}
+}
+
+templ AdminUserForm(model *AdminUserFormModel) {
+	@components.Form(model.User.FullName, model.FormModel, "PUT") {
+		<div>
+			Inscrit depuis le { model.User.CreatedAt.Time.In(tz).Format("02/01/2006") }
+		</div>
+		<label class="flex gap-2 items-center">
+			Role
+			@components.SelectField(components.SelectFieldModel{
+				FieldModel: components.FieldModel{
+					Name:     "Role",
+					Default:  model.User.Role,
+					Required: true,
+				},
+				Options: []components.SelectFieldOption{
+					{Value: "user", Label: "Utilisateur"},
+					{Value: "admin", Label: "Administrateur"},
+				},
+			})
+		</label>
+		<hr class="my-2"/>
+		<label class="flex gap-2 items-center">
+			Appartement
+			@components.Field(components.FieldModel{
+				Label:   "Appartement",
+				Name:    "Apartment",
+				Default: model.User.Apartment,
+				Attrs:   templ.Attributes{"class": "flex-1 w-full"},
+			})
+		</label>
+		<label class="flex gap-2 items-center">
+			Nom complet
+			@components.Field(components.FieldModel{
+				Label:   "Nom Complet",
+				Name:    "FullName",
+				Default: model.User.FullName,
+				Attrs:   templ.Attributes{"class": "flex-1 w-full"},
+			})
+		</label>
+		<label class="flex gap-2 items-center">
+			Email
+			@components.Field(components.FieldModel{
+				Label:   "Email",
+				Name:    "Email",
+				Default: model.User.Email,
+				Attrs:   templ.Attributes{"class": "flex-1 w-full"},
+			})
+		</label>
+		@components.Button() {
+			Enregistrer
+		}
+	}
+}
+
+templ AdminUserLogs(model *AdminUserPageModel) {
+	@components.Card("Demandes d'ouverture") {
+		if model.Logs == nil || len(model.Logs) == 0 {
+			<p class="text-center"><span class="text-3xl">👀</span><br/>Aucune demande d'ouverture</p>
+		} else {
+			<ul>
+				for _, log := range model.Logs {
+					<li>
+						{ log.CreatedAt.Time.In(tz).Format("02/01/2006 15:04:05") }
+					</li>
+				}
+			</ul>
+		}
+	}
+}
+
+templ AdminPendingRow(model *AdminUserRowModel) {
 	<li { model.Attrs... } hx-swap="outerHTML" hx-target="this">
 		<div class="flex justify-between items-center">
-			<div>{ model.User.Apartment } : { model.User.FullName }</div>
+			<div class={ templ.KV("line-through", model.User.RegistrationState == "rejected") }>
+				{ model.User.Apartment } : { model.User.FullName }
+			</div>
 			<div class="flex gap-2">
-				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/accept" }>✅</button>
-				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/reject" }>❌</button>
+				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/accept" } title="Accepter">✅</button>
+				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/reject" } title="Refuser">❌</button>
 			</div>
 		</div>
 		if model.Err != nil {
@@ -75,14 +184,35 @@ templ AdminRegistrationRow(model *AdminUserRowModel) {
 	</li>
 }
 
-templ AdminUserRow(model *AdminUserRowModel) {
-	<li { model.Attrs... }>
-		{ model.User.FullName }
+templ AdminRejectedRow(model *AdminUserRowModel) {
+	<li { model.Attrs... } hx-swap="outerHTML" hx-target="this">
+		<div class="flex justify-between items-center">
+			<div>
+				{ model.User.Apartment } : { model.User.FullName }
+			</div>
+			<div class="flex gap-2">
+				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/reset" } title="Mettre en attente">🔄</button>
+				<button hx-delete={ "/admin/registrations/" + model.User.ID.String() + "" } title="Supprimer le compte">🗑️</button>
+			</div>
+		</div>
+		if model.Err != nil {
+			<div class="text-red-500 text-xs">Une erreur est survenue : { model.Err.Error() }</div>
+		}
+	</li>
+}
+
+templ AdminAcceptedRow(model *AdminUserRowModel) {
+	<li { model.Attrs... } hx-swap="outerHTML" hx-target="this">
+		<a class="flex gap-2 items-center w-full" href={ templ.SafeURL("/admin/users/" + model.User.ID.String()) }>
+			<div>{ model.User.Apartment } :</div>
+			<div class="flex-1">{ model.User.FullName }</div>
+			<div>＞</div>
+		</a>
 	</li>
 }
 
 templ AdminInvitationForm(model *AdminInvitationFormModel) {
-	@components.AuthForm("Portail Connecté", components.NewFormError(model.Err)) {
+	@components.Form("Portail Connecté", components.NewFormError(model.Err), "POST") {
 		<p class="text-lg my-4 text-center">Il est désormais possible d'ouvrir le portail à l'aide de votre téléphone.</p>
 		<p>Scannez ce QR code pour vous inscrire </p>
 		<img width="256" height="256" src={ model.QrCode } class="m-auto"/>
@@ -101,21 +231,29 @@ templ AdminInvitationForm(model *AdminInvitationFormModel) {
 }
 
 templ menu() {
-	<nav class="h-12 w-full">
-		<ul class="h-full w-full flex gap-2 items-center">
+	<nav class="h-12 w-full border-t">
+		<ul class="h-full w-full flex items-center">
+			<li class="px-3"><a href="/user">🏠</a></li>
+			<li class="border-r h-full"></li>
 			@menuItem("/admin/users") {
 				Utilisateurs
 			}
+			<li class="border-r h-full"></li>
 			@menuItem("/admin/invitation") {
 				Code d'invitation
 			}
+			<li class="border-r h-full"></li>
+			<li class="px-4"><a href="/logout">⎋</a></li>
 		</ul>
 	</nav>
 }
 
 templ menuItem(link templ.SafeURL) {
-	<li class="flex-1 text-center">
-		<a href={ link } class={ templ.KV("font-bold", strings.HasPrefix(c.GetEchoFromTempl(ctx).Request().URL.Path, string(link))) }>
+	{{
+		isCurrent := strings.HasPrefix(c.GetEchoFromTempl(ctx).Request().URL.Path, string(link))
+	}}
+	<li class={ "flex-1 text-center h-full flex items-center justify-center", templ.KV("bg-slate-100", isCurrent) }>
+		<a href={ link } class={ templ.KV("font-bold", isCurrent) }>
 			{ children... }
 		</a>
 	</li>

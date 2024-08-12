@@ -171,7 +171,7 @@ func VerifyForm(model VerifyModel) templ.Component {
 			}
 			return templ_7745c5c3_Err
 		})
-		templ_7745c5c3_Err = components.AuthForm("Verification d'email", components.NewFormError(model.Err), templ.Attributes{"hx-post": "/reset-verification"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.Form("Verification d'email", components.NewFormError(model.Err), "POST", templ.Attributes{"hx-post": "/reset-verification"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

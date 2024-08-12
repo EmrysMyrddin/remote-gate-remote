@@ -66,7 +66,7 @@ type queriesWitTx struct {
 }
 
 func Q(c echo.Context) *Queries {
-	if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
+	if queries, ok := c.Get(queriesContextKey).(*queriesWitTx); ok {
 		return queries.queries
 	}
 
@@ -85,7 +85,7 @@ func Qtempl(templCtx context.Context) *Queries {
 }
 
 func Commit(c echo.Context) error {
-	if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
+	if queries, ok := c.Get(queriesContextKey).(*queriesWitTx); ok {
 		logger.Log.Debug().Msg("Committing transaction")
 		return queries.tx.Commit(c.Request().Context())
 	}
@@ -96,10 +96,9 @@ func TransactionMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			defer func() {
-				if queries := c.Get(queriesContextKey).(*queriesWitTx); queries != nil {
-					logger.Log.Warn().Msg("Transaction rolled back because it was not committed before the end of the request handling chain")
-					if err := queries.tx.Rollback(c.Request().Context()); err != nil {
-						logger.Log.Error().Err(err).Msg("Failed to rollback transaction")
+				if queries, ok := c.Get(queriesContextKey).(*queriesWitTx); ok {
+					if err := queries.tx.Rollback(c.Request().Context()); err == nil {
+						logger.Log.Debug().Msg("Transaction rolled back because it was not committed before the end of the request handling chain")
 					}
 				}
 			}()

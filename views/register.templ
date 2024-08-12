@@ -1,8 +1,8 @@
 package views
 
 import (
-"net/url"
-c "woody-wood-portail/views/components"
+	"net/url"
+	c "woody-wood-portail/views/components"
 )
 
 type RegisterFormValues struct {
@@ -28,7 +28,7 @@ templ RegisterPage(code string) {
 }
 
 templ RegisterForm(model c.FormModel) {
-	@c.AuthForm("Inscription", model) {
+	@c.Form("Inscription", model, "POST") {
 		@c.Field(c.FieldModel{FormModel: model,
 			Label: "Email", Name: "Email", Required: true, Type: "email", Attrs: templ.Attributes{"autocomplete": "email"},
 		})

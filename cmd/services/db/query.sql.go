@@ -431,3 +431,44 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 	)
 	return err
 }
+
+const updateUserInfo = `-- name: UpdateUserInfo :one
+update "users" set "role" = $2, full_name = $3, apartment = $4, email = $5 where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+`
+
+type UpdateUserInfoParams struct {
+	ID        uuid.UUID
+	Role      string
+	FullName  string
+	Apartment string
+	Email     string
+}
+
+func (q *Queries) UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserInfo,
+		arg.ID,
+		arg.Role,
+		arg.FullName,
+		arg.Apartment,
+		arg.Email,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.Apartment,
+		&i.PwdSalt,
+		&i.PwdHash,
+		&i.PwdIterations,
+		&i.PwdParallelism,
+		&i.PwdMemory,
+		&i.PwdVersion,
+		&i.Role,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RegistrationState,
+	)
+	return i, err
+}

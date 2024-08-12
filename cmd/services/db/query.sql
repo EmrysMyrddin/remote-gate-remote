@@ -34,6 +34,9 @@ update "users" set registration_state = 'rejected' where id = $1 returning *;
 -- name: UpdatePassword :exec
 update "users" set pwd_salt = $2, pwd_hash = $3, pwd_iterations = $4, pwd_parallelism = $5, pwd_memory = $6, pwd_version = $7 where id = $1;
 
+-- name: UpdateUserInfo :one
+update "users" set "role" = $2, full_name = $3, apartment = $4, email = $5 where id = $1 returning *;
+
 -- name: DeleteUser :one
 delete from "users" where id = $1 returning *;
 

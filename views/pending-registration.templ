@@ -36,7 +36,7 @@ templ RejectedRegistrationPage() {
 
 templ registrationPage(title string) {
 	@html("Woody Wood Gate - " + title) {
-		@components.AuthForm(title, components.FormModel{}) {
+		@components.Form(title, components.FormModel{}, "POST") {
 			{ children... }
 		}
 		@components.AuthFooter() {
