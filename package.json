@@ -8,13 +8,15 @@
   "scripts": {
     "build:prod": "yarn build --minify",
     "watch": "yarn build --watch",
-    "build": "tailwindcss build -i views/main.css -o static/css/tailwind.css"
+    "build": "tailwindcss build -i views/main.css -o static/css/tailwind.css",
+    "deploy": "caprover deploy -d"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.7"
   },
   "packageManager": "yarn@4.1.1",
   "dependencies": {
+    "caprover": "^2.3.1",
     "htmx.org": "^1.9.12"
   }
 }
