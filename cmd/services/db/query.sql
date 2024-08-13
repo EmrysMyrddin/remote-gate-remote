@@ -52,6 +52,9 @@ select * from "logs";
 -- name: ListLogsByUser :many
 select * from "logs" where user_id = $1;
 
+-- name: DeleteOldLogs :execrows
+delete from "logs" where created_at < now() - interval '1 year';
+
 -- name: GetRegistrationCode :one
 select code from "registration_code";
 

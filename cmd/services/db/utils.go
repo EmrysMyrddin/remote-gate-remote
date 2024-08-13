@@ -118,3 +118,14 @@ func TransactionMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
+
+func DeleteOldLogs() {
+	queries := New(pool)
+	nbDeletedLogs, err := queries.DeleteOldLogs(context.Background())
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("failed to delete old logs")
+		return
+	}
+
+	logger.Log.Info().Int64("deleted", nbDeletedLogs).Msg("Old logs deleted")
+}

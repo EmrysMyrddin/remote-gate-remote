@@ -1,4 +1,4 @@
-package views
+package timezone
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	_ "time/tzdata" // Include TZ data into the binary
 )
 
-var tz *time.Location
+var TZ *time.Location
 
 func init() {
 	var err error
-	tz, err = time.LoadLocation("Europe/Paris")
+	TZ, err = time.LoadLocation("Europe/Paris")
 	if err != nil {
 		panic(fmt.Errorf("failed to load timezone: %w", err))
 	}

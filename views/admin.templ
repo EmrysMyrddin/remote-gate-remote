@@ -4,6 +4,7 @@ import (
 	"strings"
 	c "woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/services/db"
+	"woody-wood-portail/cmd/timezone"
 	components "woody-wood-portail/views/components"
 )
 
@@ -101,7 +102,7 @@ templ AdminUserPage(model *AdminUserPageModel) {
 templ AdminUserForm(model *AdminUserFormModel) {
 	@components.Form(model.User.FullName, model.FormModel, "PUT") {
 		<div>
-			Inscrit depuis le { model.User.CreatedAt.Time.In(tz).Format("02/01/2006") }
+			Inscrit depuis le { model.User.CreatedAt.Time.In(timezone.TZ).Format("02/01/2006") }
 		</div>
 		<label class="flex gap-2 items-center">
 			Role
@@ -159,7 +160,7 @@ templ AdminUserLogs(model *AdminUserPageModel) {
 			<ul>
 				for _, log := range model.Logs {
 					<li>
-						{ log.CreatedAt.Time.In(tz).Format("02/01/2006 15:04:05") }
+						{ log.CreatedAt.Time.In(timezone.TZ).Format("02/01/2006 15:04:05") }
 					</li>
 				}
 			</ul>

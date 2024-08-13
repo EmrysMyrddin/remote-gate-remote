@@ -10,8 +10,10 @@ import (
 	"woody-wood-portail/cmd/handlers"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
+	"woody-wood-portail/cmd/timezone"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/robfig/cron"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
@@ -34,6 +36,16 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 	defer pool.Close()
+
+	// Cron task to delete old logs after 1 year. We do it every day at midnight.
+	c := cron.NewWithLocation(timezone.TZ)
+	err = c.AddFunc("@daily", func() {
+		db.DeleteOldLogs()
+	})
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("failed to add cron job")
+	}
+	c.Start()
 
 	e := echo.New()
 

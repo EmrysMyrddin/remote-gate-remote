@@ -77,6 +77,18 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteOldLogs = `-- name: DeleteOldLogs :execrows
+delete from "logs" where created_at < now() - interval '1 year'
+`
+
+func (q *Queries) DeleteOldLogs(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteOldLogs)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteUser = `-- name: DeleteUser :one
 delete from "users" where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
 `
