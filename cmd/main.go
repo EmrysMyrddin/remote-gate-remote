@@ -31,6 +31,8 @@ func init() {
 }
 
 func main() {
+	db.Migrate()
+
 	pool, err := db.Connect()
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v", err)

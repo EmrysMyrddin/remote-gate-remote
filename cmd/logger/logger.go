@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -49,3 +50,15 @@ var Log = zerolog.New(zerolog.ConsoleWriter{
 		return fmt.Sprintf("---        %s", i)
 	},
 }).With().Timestamp().Stack().Logger()
+
+var StdLog = (*StdLogger)(&Log)
+
+type StdLogger zerolog.Logger
+
+func (l *StdLogger) Printf(format string, v ...interface{}) {
+	(*zerolog.Logger)(l).Info().Msgf(strings.Trim(format, "\n"), v...)
+}
+
+func (l *StdLogger) Fatalf(format string, v ...interface{}) {
+	(*zerolog.Logger)(l).Fatal().Msgf(strings.Trim(format, "\n"), v...)
+}

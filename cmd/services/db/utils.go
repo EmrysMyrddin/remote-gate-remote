@@ -19,7 +19,15 @@ const (
 
 var (
 	pool *pgxpool.Pool
+	url  string
 )
+
+func init() {
+	var ok bool
+	if url, ok = os.LookupEnv("DATABASE"); !ok {
+		url = "user=postgres dbname=gate password=postgres host=localhost"
+	}
+}
 
 type Argon2Password struct {
 	Salt        string
@@ -53,19 +61,10 @@ func (u *UpdatePasswordParams) SetPassword(password Argon2Password) {
 }
 
 func Connect() (*pgxpool.Pool, error) {
-	connectionString := os.Getenv("DATABASE")
-	if connectionString == "" {
-		connectionString = "user=postgres dbname=gate password=postgres host=localhost"
-	}
-
 	var err error
-	pool, err = pgxpool.New(context.Background(), connectionString)
+	pool, err = pgxpool.New(context.Background(), url)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to create database pool")
-	}
-
-	if _, err := pool.Exec(context.Background(), "SELECT 1"); err != nil {
-		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 
 	return pool, nil
