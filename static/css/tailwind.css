@@ -837,6 +837,10 @@ video {
     display: none;
   }
 
+  .print\:border-none {
+    border-style: none;
+  }
+
   .print\:shadow-none {
     --tw-shadow: 0 0 #0000;
     --tw-shadow-colored: 0 0 #0000;

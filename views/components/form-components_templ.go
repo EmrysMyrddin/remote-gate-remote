@@ -424,7 +424,7 @@ func Card(title string) templ.Component {
 			templ_7745c5c3_Var13 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"card w-80 border border-gray-50 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 print:shadow-none\"><h1 class=\"text-2xl mb-4 text-center\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"card w-80 border border-gray-50 rounded m-auto p-4 mt-20 shadow-md flex flex-col gap-2 print:shadow-none print:border-none\"><h1 class=\"text-2xl mb-4 text-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
