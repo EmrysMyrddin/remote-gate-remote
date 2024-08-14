@@ -60,10 +60,6 @@ func Load() {
 		logger.Log.Fatal().Err(err).Msg("unable to unmarshal config")
 	}
 
-	if Config.Http.Port != "80" && strings.HasSuffix(Config.Http.BaseURL, Config.Http.Port) {
-		Config.Http.BaseURL += ":" + Config.Http.Port
-	}
-
 	if err := validator.New().Struct(Config); err != nil {
 		validationErr, ok := err.(validator.ValidationErrors)
 		if !ok {

@@ -27,7 +27,7 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN CGO_ENABLED=0 go build -o /usr/src/app/build/ -a -ldflags '-extldflags "-static"' ./...
+RUN CGO_ENABLED=0 go build -tags="viper_bind_struct" -o /usr/src/app/build/ -a -ldflags '-extldflags "-static"' ./...
 
 FROM scratch
 COPY --from=builder /usr/src/app/build/cmd /app
