@@ -221,7 +221,7 @@ templ AdminInvitationForm(model *AdminInvitationFormModel) {
 		<p class="text-center">
 			Ou rendez-vous sur 
 			<br/>
-			<span class="text-blue-500">{ strings.Split(config.Config.Http.BaseURL, "://")[2] + "/register" }</span>
+			<span class="text-blue-500">{ strings.Split(config.Config.Http.BaseURL, "://")[1] + "/register" }</span>
 			<br/>
 			et utilisez le code d'invitation
 			<strong>{ model.Code }</strong>.
@@ -233,7 +233,7 @@ templ AdminInvitationForm(model *AdminInvitationFormModel) {
 }
 
 templ menu() {
-	<nav class="h-12 w-full border-t">
+	<nav class="h-12 w-full border-t print:hidden">
 		<ul class="h-full w-full flex items-center">
 			<li class="px-3"><a href="/user">🏠</a></li>
 			<li class="border-r h-full"></li>

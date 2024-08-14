@@ -931,7 +931,7 @@ func AdminInvitationForm(model *AdminInvitationFormModel) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var40 string
-			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(strings.Split(config.Config.Http.BaseURL, "://")[2] + "/register")
+			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(strings.Split(config.Config.Http.BaseURL, "://")[1] + "/register")
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin.templ`, Line: 224, Col: 98}
 			}
@@ -1006,7 +1006,7 @@ func menu() templ.Component {
 			templ_7745c5c3_Var43 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<nav class=\"h-12 w-full border-t\"><ul class=\"h-full w-full flex items-center\"><li class=\"px-3\"><a href=\"/user\">🏠</a></li><li class=\"border-r h-full\"></li>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<nav class=\"h-12 w-full border-t print:hidden\"><ul class=\"h-full w-full flex items-center\"><li class=\"px-3\"><a href=\"/user\">🏠</a></li><li class=\"border-r h-full\"></li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
