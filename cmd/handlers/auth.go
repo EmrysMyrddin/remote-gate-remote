@@ -59,6 +59,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 	authGroup.Use(auth.JWTMiddleware(func(c echo.Context, err error) error {
 		if !errors.Is(err, auth.ErrJWTMissing) && !errors.Is(err, auth.ErrEmailNotVerified) && !errors.Is(err, auth.ErrRegistrationNotAccepted) {
+			logger.Log.Debug().Err(err).Msg("invalid JWT, logging out")
 			RedirectWitQuery(c, "/logout")
 		}
 		return nil

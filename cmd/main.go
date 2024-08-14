@@ -21,8 +21,6 @@ import (
 )
 
 func main() {
-	config.Load()
-
 	db.Migrate()
 
 	pool, err := db.Connect()

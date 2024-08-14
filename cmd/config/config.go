@@ -42,7 +42,7 @@ type config struct {
 	}
 }
 
-func Load() {
+func init() {
 	Config.Http.Port = "80"
 	Config.Http.BaseURL = "http://localhost"
 	Config.Http.JWT.MaxAge = 30
