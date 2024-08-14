@@ -111,13 +111,13 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.RegisterForm(model))
 		}
 
-		logger.Log.Info().Stringer("user", newUser.ID).Msg("User created")
-
-		if err = sendVerificationMail(c, newUser); err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to send verification email")
-			// Redirect to the verification page to allow user to resend the email
-			return Redirect(c, "/verify")
+		if err := db.Commit(c); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to commit transaction")
+			model.Errors.Global = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
 		}
+
+		logger.Log.Info().Stringer("user", newUser.ID).Msg("User created")
 
 		if err := addAuthenticationCookie(c, newUser.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to add authentication cookie")
@@ -125,10 +125,10 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Redirect(c, "/login")
 		}
 
-		if err := db.Commit(c); err != nil {
-			logger.Log.Error().Err(err).Msg("Unable to commit transaction")
-			model.Errors.Global = "Erreur inatendue"
-			return Render(c, 422, views.RegisterForm(model))
+		if err = sendVerificationMail(c, newUser); err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to send verification email")
+			// Redirect to the verification page to allow user to resend the email
+			return Redirect(c, "/verify?error="+url.QueryEscape("Une erreur est survenue, veuillez réssayer."))
 		}
 
 		return Redirect(c, "/verify")
