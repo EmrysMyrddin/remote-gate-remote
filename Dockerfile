@@ -21,7 +21,7 @@ RUN corepack enable
 WORKDIR /usr/src/app
 
 COPY package.json yarn.lock .yarnrc.yml ./
-RUN yarn install
+RUN yarn workspaces focus --production
 
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
