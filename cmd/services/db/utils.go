@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"errors"
-	"os"
 
+	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/logger"
 
@@ -19,15 +19,7 @@ const (
 
 var (
 	pool *pgxpool.Pool
-	url  string
 )
-
-func init() {
-	var ok bool
-	if url, ok = os.LookupEnv("DATABASE"); !ok {
-		url = "user=postgres dbname=gate password=postgres host=localhost"
-	}
-}
 
 type Argon2Password struct {
 	Salt        string
@@ -62,7 +54,7 @@ func (u *UpdatePasswordParams) SetPassword(password Argon2Password) {
 
 func Connect() (*pgxpool.Pool, error) {
 	var err error
-	pool, err = pgxpool.New(context.Background(), url)
+	pool, err = pgxpool.New(context.Background(), config.Config.Database.URL)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to create database pool")
 	}

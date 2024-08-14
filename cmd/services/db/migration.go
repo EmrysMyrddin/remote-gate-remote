@@ -20,7 +20,7 @@ func Migrate() {
 		return
 	}
 
-	db, err := sql.Open("pgx", url)
+	db, err := sql.Open("pgx", config.Config.Database.URL)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("goose: failed to open database")
 	}
