@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"woody-wood-portail/cmd/config"
 	ctx "woody-wood-portail/cmd/ctx/auth"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
@@ -281,7 +282,7 @@ func RegisterAdminHandlers(e RequireAuth) {
 }
 
 func invitationQrCodeHandler(code string) (string, error) {
-	qrPNG, err := qrcode.Encode(BASE_URL+"/register?code="+code, qrcode.Medium, 256)
+	qrPNG, err := qrcode.Encode(config.Config.Http.BaseURL+"/register?code="+code, qrcode.Medium, 256)
 	if err != nil {
 		return "", err
 	}

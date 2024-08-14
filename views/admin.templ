@@ -2,6 +2,7 @@ package views
 
 import (
 	"strings"
+	"woody-wood-portail/cmd/config"
 	c "woody-wood-portail/cmd/ctx"
 	"woody-wood-portail/cmd/services/db"
 	"woody-wood-portail/cmd/timezone"
@@ -220,7 +221,7 @@ templ AdminInvitationForm(model *AdminInvitationFormModel) {
 		<p class="text-center">
 			Ou rendez-vous sur 
 			<br/>
-			<span class="text-blue-500">woody-wood-gate.cocaud.dev/register</span>
+			<span class="text-blue-500">{ strings.Split(config.Config.Http.BaseURL, "://")[2] + "/register" }</span>
 			<br/>
 			et utilisez le code d'invitation
 			<strong>{ model.Code }</strong>.

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"embed"
+	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/logger"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -14,6 +15,11 @@ import (
 var embedMigrations embed.FS
 
 func Migrate() {
+	if !config.Config.Database.MigrateOnStart {
+		logger.Log.Info().Msg("goose: database migration disabled")
+		return
+	}
+
 	db, err := sql.Open("pgx", url)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("goose: failed to open database")

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/url"
-	"os"
 	"reflect"
 	ctx "woody-wood-portail/cmd/ctx/auth"
 	"woody-wood-portail/cmd/logger"
@@ -14,11 +13,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	fr_translations "github.com/go-playground/validator/v10/translations/fr"
 	"github.com/labstack/echo/v4"
-)
-
-var (
-	GATE_SECRET = os.Getenv("GATE_SECRET")
-	BASE_URL    = os.Getenv("BASE_URL")
 )
 
 var (
@@ -68,7 +62,7 @@ func Validate(c echo.Context, v interface{}) validator.ValidationErrorsTranslati
 	}
 	validationErr, ok := err.(validator.ValidationErrors)
 	if !ok {
-		panic(err)
+		logger.Log.Fatal().Err(err).Msg("Failed to validate")
 	}
 
 	res := make(validator.ValidationErrorsTranslations, len(validationErr))
@@ -124,14 +118,6 @@ type CustomValidation struct {
 }
 
 func init() {
-	if GATE_SECRET == "" {
-		logger.Log.Fatal().Msg("GATE_SECRET is required")
-	}
-
-	if BASE_URL == "" {
-		BASE_URL = "http://localhost"
-	}
-
 	universalTranslator := ut.New(en.New(), fr.New())
 	translator, _ = universalTranslator.GetTranslator("fr")
 	fr_translations.RegisterDefaultTranslations(validate, translator)

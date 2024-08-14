@@ -11,5 +11,6 @@
   },
   "files.associations": {
     "*.h.example": "c"
-  }
+  },
+  "go.buildTags": "viper_bind_struct"
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/handlers"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
@@ -15,22 +16,13 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/robfig/cron"
 
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-var (
-	PORT = os.Getenv("PORT")
-)
-
-func init() {
-	if PORT == "" {
-		PORT = "80"
-	}
-}
-
 func main() {
+	config.Load()
+
 	db.Migrate()
 
 	pool, err := db.Connect()
@@ -80,7 +72,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		if err := e.Start(":" + PORT); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(":" + config.Config.Http.Port); err != nil && err != http.ErrServerClosed {
 			logger.Log.Fatal().Err(err).Msg("HTTP server crashed")
 		}
 	}()

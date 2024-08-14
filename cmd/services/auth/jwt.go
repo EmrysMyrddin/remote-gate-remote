@@ -3,9 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"time"
+	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
 
@@ -16,7 +15,6 @@ import (
 )
 
 var (
-	JWT_SECRET                 = []byte(os.Getenv("JWT_SECRET"))
 	ErrEmailNotVerified        = errors.New("email not verified")
 	ErrRegistrationNotAccepted = errors.New("registration not accepted")
 	ErrJWTMissing              = echojwt.ErrJWTMissing
@@ -26,12 +24,6 @@ var (
 	ResetPasswordAudience     = audience("reset_password")
 )
 
-func init() {
-	if len(JWT_SECRET) == 0 {
-		log.Fatal("JWT_SECRET is not set in the environment variables")
-	}
-}
-
 func CreateToken(userID uuid.UUID, audience audience) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.RegisteredClaims{
 		Subject:  userID.String(),
@@ -39,7 +31,7 @@ func CreateToken(userID uuid.UUID, audience audience) (string, error) {
 		IssuedAt: &jwt.NumericDate{Time: time.Now()},
 	})
 
-	return token.SignedString([]byte(JWT_SECRET))
+	return token.SignedString([]byte(config.Config.Http.JWT.Secret))
 }
 
 func JWTMiddleware(errorHandler func(c echo.Context, err error) error) echo.MiddlewareFunc {
@@ -108,7 +100,7 @@ func getJwtKey(token *jwt.Token) (interface{}, error) {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
 
-	return JWT_SECRET, nil
+	return []byte(config.Config.Http.JWT.Secret), nil
 }
 
 type audience string

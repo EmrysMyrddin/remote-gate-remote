@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"time"
+	"woody-wood-portail/cmd/config"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -13,7 +14,7 @@ func RegisterGateHandlers(e *echo.Echo, model *Model, openChannel chan struct{})
 
 	middleware.DefaultKeyAuthConfig.AuthScheme = ""
 	gateRoutes.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == GATE_SECRET, nil
+		return key == config.Config.Gate.Secret, nil
 	}))
 
 	gateHandler := func(c echo.Context) error {
@@ -23,7 +24,7 @@ func RegisterGateHandlers(e *echo.Echo, model *Model, openChannel chan struct{})
 		select {
 		case <-openChannel:
 			return c.NoContent(200)
-		case <-time.After(30 * time.Second):
+		case <-time.After(time.Duration(config.Config.Gate.Timeout) * time.Second):
 			return c.NoContent(408)
 		case <-c.Request().Context().Done():
 			return nil

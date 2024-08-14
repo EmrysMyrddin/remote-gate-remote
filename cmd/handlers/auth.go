@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"time"
+	"woody-wood-portail/cmd/config"
 	ctx "woody-wood-portail/cmd/ctx/auth"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/auth"
@@ -22,10 +23,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
-)
-
-const (
-	MAX_AGE = int(time.Hour * 24 * 7 * 4) // 1 month
 )
 
 type RequireAuth struct {
@@ -313,10 +310,12 @@ func RegisterAuthHandlers(e *echo.Echo) {
 			return Render(c, 422, views.PasswordForgottenForm(model))
 		}
 
+		resetURL := fmt.Sprintf("%s/reset-password?code=%s", config.Config.Http.BaseURL, resetToken)
+
 		err = mails.SendMail(c,
 			user,
 			"Réinitialisation de votre mot de passe Woody Wood Gate",
-			emails.PasswordReset(user, templ.SafeURL(fmt.Sprintf("%s/reset-password?code=%s", BASE_URL, resetToken))),
+			emails.PasswordReset(user, templ.SafeURL(resetURL)),
 		)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to send password reset email")
@@ -412,7 +411,7 @@ func addAuthenticationCookie(c echo.Context, userID uuid.UUID) error {
 		return fmt.Errorf("unable to create authentication token: %w", err)
 	}
 
-	c.SetCookie(createCookie(token, MAX_AGE))
+	c.SetCookie(createCookie(token, config.Config.Http.JWT.MaxAge))
 	return nil
 }
 
@@ -421,7 +420,7 @@ func createCookie(token string, maxAge int) *http.Cookie {
 		Name:     "authorization",
 		Value:    token,
 		HttpOnly: true,
-		MaxAge:   maxAge,
+		MaxAge:   maxAge * 24 * 60 * 60,
 	}
 }
 
@@ -431,10 +430,12 @@ func sendVerificationMail(c echo.Context, user db.User) error {
 		return fmt.Errorf("unable to create email verification token: %w", err)
 	}
 
+	verificationURL := fmt.Sprintf("%s/verify?code=%s", config.Config.Http.BaseURL, mailVerifToken)
+
 	err = mails.SendMail(c,
 		user,
 		"Votre lien de vérification de compte Woody Wood Gate",
-		emails.EmailVerification(user, templ.SafeURL(fmt.Sprintf("%s/verify?code=%s", BASE_URL, mailVerifToken))),
+		emails.EmailVerification(user, templ.SafeURL(verificationURL)),
 	)
 	if err != nil {
 		return fmt.Errorf("unable to send verification email: %w", err)
@@ -449,12 +450,14 @@ func sendRegistrationRequestMail(c echo.Context, user db.User) error {
 		return fmt.Errorf("unable to list admins: %w", err)
 	}
 
+	adminURL := fmt.Sprintf("%s/admin", config.Config.Http.BaseURL)
+
 	errs := make([]error, 0, len(admins))
 	for _, admin := range admins {
 		if err := mails.SendMail(c,
 			admin,
 			"Nouvelle demande d'inscription sur Woody Wood Gate",
-			emails.RegistrationRequest(user, templ.SafeURL(fmt.Sprintf("%s/admin", BASE_URL))),
+			emails.RegistrationRequest(user, templ.SafeURL(adminURL)),
 		); err != nil {
 			errs = append(errs, err)
 		}

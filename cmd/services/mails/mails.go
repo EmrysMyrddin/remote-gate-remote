@@ -2,8 +2,8 @@ package mails
 
 import (
 	"fmt"
-	"os"
 	"strings"
+	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
 
@@ -13,30 +13,8 @@ import (
 )
 
 var (
-	API_KEY       = os.Getenv("MAILJET_API_KEY")
-	SECRET_KEY    = os.Getenv("MAILJET_SECRET_KEY")
-	mailjetClient = mailjet.NewMailjetClient(API_KEY, SECRET_KEY)
-	SENDER        = &mailjet.RecipientV31{
-		Email: os.Getenv("MAIL_SENDER_ADDRESS"),
-		Name:  os.Getenv("MAIL_SENDER_NAME"),
-	}
+	mailjetClient = mailjet.NewMailjetClient(config.Config.Mail.APIKey, config.Config.Mail.SecretKey)
 )
-
-func init() {
-	if SENDER.Email == "" {
-		SENDER.Email = "woody-wood-gate@cocaud.dev"
-	}
-	if SENDER.Name == "" {
-		SENDER.Name = "Woody Wood Gate"
-	}
-
-	if API_KEY == "" {
-		logger.Log.Fatal().Msg("MAILJET_API_KEY is not set in the environment variables")
-	}
-	if SECRET_KEY == "" {
-		logger.Log.Fatal().Msg("MAILJET_API_KEY or MAILJET_SECRET_KEY is not set in the environment variables")
-	}
-}
 
 func SendMail(c echo.Context, recipient db.User, subject string, body templ.Component) error {
 	renderedBody := &strings.Builder{}
@@ -47,7 +25,7 @@ func SendMail(c echo.Context, recipient db.User, subject string, body templ.Comp
 	res, err := mailjetClient.SendMailV31(&mailjet.MessagesV31{
 		Info: []mailjet.InfoMessagesV31{
 			{
-				From: SENDER,
+				From: &config.Config.Mail.Sender,
 				To: &mailjet.RecipientsV31{
 					mailjet.RecipientV31{
 						Email: recipient.Email,
