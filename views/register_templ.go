@@ -53,7 +53,7 @@ func RegisterPage(code string) templ.Component {
 			}
 			ctx = templ.InitializeContext(ctx)
 			templ_7745c5c3_Err = RegisterForm(c.FormModel{
-				Values: url.Values{"code": []string{code}},
+				Values: url.Values{"InvitationCode": []string{code}},
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

@@ -17,7 +17,7 @@ type RegisterFormValues struct {
 templ RegisterPage(code string) {
 	@html("Woody Wood Gate - Inscription") {
 		@RegisterForm(c.FormModel{
-			Values: url.Values{"code": []string{code}},
+			Values: url.Values{"InvitationCode": []string{code}},
 		})
 		@c.AuthFooter() {
 			Vous avez déjà un compte ?
