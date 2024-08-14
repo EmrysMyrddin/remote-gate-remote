@@ -1006,7 +1006,7 @@ func menu() templ.Component {
 			templ_7745c5c3_Var43 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<nav class=\"h-12 w-full border-t print:hidden\"><ul class=\"h-full w-full flex items-center\"><li class=\"px-3\"><a href=\"/user\">🏠</a></li><li class=\"border-r h-full\"></li>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<nav class=\"h-12 w-full border-t print:hidden sm:h-dvh sm:min-w-40 sm:w-1/5 sm:fixed sm:left-0\"><h1 class=\"p-2 hidden sm:block border-r\">Woody Wood Gate</h1><ul class=\"sm:pt-2 border-r h-full w-full flex items-center sm:flex-col sm:justify-start sm:items-start\"><li class=\"border-r h-full sm:border-b sm:h-fit sm:w-full\"></li><li class=\"px-3 sm:px-2 sm:py-2\"><a href=\"/user\">🏠<span class=\"hidden sm:inline\">&nbsp;Accueil</span></a></li><li class=\"border-r h-full sm:border-b sm:h-fit sm:w-full\"></li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1032,7 +1032,7 @@ func menu() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li class=\"border-r h-full\"></li>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li class=\"border-r h-full sm:border-b sm:h-fit sm:w-full\"></li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1058,7 +1058,7 @@ func menu() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li class=\"border-r h-full\"></li><li class=\"px-4\"><a href=\"/logout\">⎋</a></li></ul></nav>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li class=\"border-r h-full sm:border-b sm:h-fit sm:w-full\"></li><li class=\"px-4 sm:px-2 sm:py-2\"><a href=\"/logout\">⎋<span class=\"hidden sm:inline\">&nbsp;Se déconecter</span></a></li></ul></nav>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1086,7 +1086,7 @@ func menuItem(link templ.SafeURL) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 
 		isCurrent := strings.HasPrefix(c.GetEchoFromTempl(ctx).Request().URL.Path, string(link))
-		var templ_7745c5c3_Var47 = []any{"flex-1 text-center h-full flex items-center justify-center", templ.KV("bg-slate-100", isCurrent)}
+		var templ_7745c5c3_Var47 = []any{"sm:justify-start sm:w-full sm:p-2 sm:flex-none sm:h-fit flex-1 text-center h-full flex items-center justify-center", templ.KV("bg-slate-100", isCurrent)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var47...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

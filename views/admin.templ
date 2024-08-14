@@ -233,19 +233,21 @@ templ AdminInvitationForm(model *AdminInvitationFormModel) {
 }
 
 templ menu() {
-	<nav class="h-12 w-full border-t print:hidden">
-		<ul class="h-full w-full flex items-center">
-			<li class="px-3"><a href="/user">🏠</a></li>
-			<li class="border-r h-full"></li>
+	<nav class="h-12 w-full border-t print:hidden sm:h-dvh sm:min-w-40 sm:w-1/5 sm:fixed sm:left-0">
+		<h1 class="p-2 hidden sm:block border-r">Woody Wood Gate</h1>
+		<ul class="sm:pt-2 border-r h-full w-full flex items-center sm:flex-col sm:justify-start sm:items-start">
+			<li class="border-r h-full sm:border-b sm:h-fit sm:w-full"></li>
+			<li class="px-3 sm:px-2 sm:py-2"><a href="/user">🏠<span class="hidden sm:inline">&nbsp;Accueil</span></a></li>
+			<li class="border-r h-full sm:border-b sm:h-fit sm:w-full"></li>
 			@menuItem("/admin/users") {
 				Utilisateurs
 			}
-			<li class="border-r h-full"></li>
+			<li class="border-r h-full sm:border-b sm:h-fit sm:w-full"></li>
 			@menuItem("/admin/invitation") {
 				Code d'invitation
 			}
-			<li class="border-r h-full"></li>
-			<li class="px-4"><a href="/logout">⎋</a></li>
+			<li class="border-r h-full sm:border-b sm:h-fit sm:w-full"></li>
+			<li class="px-4 sm:px-2 sm:py-2"><a href="/logout">⎋<span class="hidden sm:inline">&nbsp;Se déconecter</span></a></li>
 		</ul>
 	</nav>
 }
@@ -254,7 +256,7 @@ templ menuItem(link templ.SafeURL) {
 	{{
 		isCurrent := strings.HasPrefix(c.GetEchoFromTempl(ctx).Request().URL.Path, string(link))
 	}}
-	<li class={ "flex-1 text-center h-full flex items-center justify-center", templ.KV("bg-slate-100", isCurrent) }>
+	<li class={ "sm:justify-start sm:w-full sm:p-2 sm:flex-none sm:h-fit flex-1 text-center h-full flex items-center justify-center", templ.KV("bg-slate-100", isCurrent) }>
 		<a href={ link } class={ templ.KV("font-bold", isCurrent) }>
 			{ children... }
 		</a>
