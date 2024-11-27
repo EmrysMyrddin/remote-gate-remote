@@ -1,6 +1,8 @@
 // WiFi Configuration
-#define WIFI_SSID "your-ssid"
-#define WIFI_PASSWORD "your-password"
+const int nb_wifis = 1;
+const char* wifis[nb_wifis * 2] = {
+  "SSID", "PASSWORD",
+};
 
 // API Configuration
 #define SECURED
