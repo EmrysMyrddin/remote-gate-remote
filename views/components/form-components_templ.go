@@ -273,7 +273,7 @@ func Button(attrs ...templ.Attributes) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("><img src=\"/static/images/spinner.svg\" class=\"show-when-loading h-8 absolute inset-0 m-auto\"> <span class=\"hide-when-loading\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" hx-target=\"find span\"><img src=\"/static/images/spinner.svg\" class=\"show-when-loading h-8 absolute inset-0 m-auto\"> <span class=\"hide-when-loading\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -323,7 +323,7 @@ func FormError(err string, attrs ...templ.Attributes) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(" " + err)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/form-components.templ`, Line: 131, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/form-components.templ`, Line: 132, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -431,7 +431,7 @@ func Card(title string) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/form-components.templ`, Line: 156, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/form-components.templ`, Line: 157, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {

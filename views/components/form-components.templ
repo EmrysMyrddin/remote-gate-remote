@@ -118,6 +118,7 @@ templ Button(attrs ...templ.Attributes) {
 			expect1(attrs)["class"],
 		}
 		{ expect1(attrs)... }
+		hx-target="find span"
 	>
 		<img src="/static/images/spinner.svg" class="show-when-loading h-8 absolute inset-0 m-auto"/>
 		<span class="hide-when-loading">

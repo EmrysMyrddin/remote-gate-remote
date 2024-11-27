@@ -53,6 +53,8 @@ func init() {
 	Config.Mail.Sender.Email = "woody-wood-gate@cocaud.dev"
 	Config.Mail.Sender.Name = "Woody Wood Gate"
 
+	Config.Gate.Timeout = 60
+
 	v := viper.New()
 	v.AutomaticEnv()
 	err := v.Unmarshal(&Config)

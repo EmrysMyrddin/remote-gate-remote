@@ -18,23 +18,23 @@ func RegisterUserHandlers(e RequireAuth, model *Model, openChannel chan struct{}
 	userRoutes.GET("", userHandler)
 	userRoutes.GET("/", userHandler)
 
-	userRoutes.GET("/open", func(c echo.Context) error {
+	userRoutes.PUT("/open", func(c echo.Context) error {
 		if len(openChannel) != 0 {
-			return c.String(200, "La porte est déjà en train de s'ouvrir")
+			return Render(c, 200, views.OpenResult("La porte est déjà en train de s'ouvrir", true))
 		}
 
 		user := ctx.GetUserFromEcho(c)
 		if _, err := db.Q(c).CreateLog(c.Request().Context(), user.ID); err != nil {
 			logger.Log.Error().Err(err).Msg("Failed to create log")
-			return c.String(422, "Une érreur est survenue")
+			return Render(c, 422, views.OpenResult("Une erreur est survenue", false))
 		}
 
 		if err := db.Commit(c); err != nil {
 			logger.Log.Error().Err(err).Msg("Failed to commit transaction")
-			return c.String(422, "Une érreur est survenue")
+			return Render(c, 422, views.OpenResult("Une érreur est survenue", false))
 		}
 
 		openChannel <- struct{}{}
-		return c.String(200, "La porte s'ouvre")
+		return Render(c, 200, views.OpenResult("La porte s'ouvre", true))
 	})
 }

@@ -15,9 +15,17 @@ templ UserPage(isOnline bool) {
 					🔴 Le portail est <span class="text-red-500">déconnecté</span>
 				}
 			</p>
-			@components.Button(templ.Attributes{"hx-get": "/user/open", "class": "my-8", "disabled": !isOnline}) {
+			@components.Button(templ.Attributes{"hx-put": "/user/open", "class": "mt-8", "disabled": !isOnline, "hx-target": "#result"}) {
 				Ouvrir le portail
+				<script>
+					(() => {
+						document.currentScript.closest('button').addEventListener('htmx:trigger', () => {
+							document.querySelector('#result').innerHTML = ''
+						})
+					})()
+				</script>
 			}
+			<div id="result" class="my-4"></div>
 		}
 		@components.AuthFooter() {
 			<a href="/logout" class="text-blue-500 mt-10">Se déconnecter</a>
@@ -27,5 +35,19 @@ templ UserPage(isOnline bool) {
 				<a href="/admin" class="text-blue-500 mt-10">Panneau d'administration</a>
 			}
 		}
+	}
+}
+
+templ OpenResult(message string, success bool) {
+	@components.Alert(openResultKind(success), templ.Attributes{"id": "result", "autoClose": 5}) {
+		{message}
+	}
+}
+
+func openResultKind(success bool) string {
+	if success {
+		return "success"
+	} else {
+		return "error"
 	}
 }
