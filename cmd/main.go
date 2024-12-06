@@ -64,7 +64,7 @@ func main() {
 
 	requireAuth := handlers.RequireAuthGroup(e)
 	handlers.RegisterUserHandlers(requireAuth, &model, openChannel)
-	handlers.RegisterAdminHandlers(requireAuth)
+	handlers.RegisterAdminHandlers(requireAuth, &model)
 
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

@@ -7,18 +7,20 @@ import (
 templ Alert(kind string, attrs ...templ.Attributes) {
 	<div { expect1(attrs)... } class={"p-2 rounded alert", resultCSS(kind)}>
     {children...}
-    if autoClose, ok := attrs[0]["autoClose"]; ok {
-      <script data-delay={strconv.Itoa(autoClose.(int))}>
-        (() => {
-          const delay = Number(document.currentScript.getAttribute('data-delay'))
-          if(!delay) {
-            return
-          }
+    if expect1(attrs) != nil {
+      if autoClose, ok := attrs[0]["autoClose"]; ok {
+        <script data-delay={strconv.Itoa(autoClose.(int))}>
+          (() => {
+            const delay = Number(document.currentScript.getAttribute('data-delay'))
+            if(!delay) {
+              return
+            }
 
-          const alert = document.currentScript.closest(".alert");
-          setTimeout(() => alert.parentNode.removeChild(alert), delay * 1000);
-        })()
-      </script>
+            const alert = document.currentScript.closest(".alert");
+            setTimeout(() => alert.parentNode.removeChild(alert), delay * 1000);
+          })()
+        </script>
+      }
     }
   </div>
 }

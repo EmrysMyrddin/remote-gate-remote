@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"woody-wood-portail/cmd/logger"
 
@@ -27,7 +28,8 @@ type config struct {
 	Gate struct {
 		Secret string `validate:"required"`
 		// Timeout of the polling request in seconds
-		Timeout int
+		Timeout           int
+		FirmwareDirectory string `mapstructure:"firmware_directory"`
 	}
 
 	Database struct {
@@ -54,6 +56,8 @@ func init() {
 	Config.Mail.Sender.Name = "Woody Wood Gate"
 
 	Config.Gate.Timeout = 60
+	Config.Gate.FirmwareDirectory = "/usr/src/app/firmwares"
+	println(os.Getenv("Gate."))
 
 	v := viper.New()
 	v.AutomaticEnv()

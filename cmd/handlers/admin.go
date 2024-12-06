@@ -4,7 +4,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
+	"os"
+	"path"
+	"strings"
 	"woody-wood-portail/cmd/config"
 	ctx "woody-wood-portail/cmd/ctx/auth"
 	"woody-wood-portail/cmd/logger"
@@ -20,7 +24,7 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-func RegisterAdminHandlers(e RequireAuth) {
+func RegisterAdminHandlers(e RequireAuth, gateModel *Model) {
 	adminGroup := e.Group.Group("/admin")
 	adminGroup.Use(RequireAdminRoleMiddleware)
 
@@ -278,6 +282,74 @@ func RegisterAdminHandlers(e RequireAuth) {
 		}
 
 		return c.NoContent(200)
+	})
+
+	adminGroup.GET("/firmware", func(c echo.Context) error {
+		model := views.FirmwarePageModel{}
+
+		if err := os.MkdirAll(config.Config.Gate.FirmwareDirectory, 0755); err != nil {
+			model.ErrorMsg = fmt.Sprintf("Impossible de créer le dossier du firmware: %s", err)
+			logger.Log.Error().Err(err).Msg("Failed to open firmware directory")
+			return Render(c, 422, views.FirmwarePage(model))
+		}
+
+		dirEntries, err := os.ReadDir(config.Config.Gate.FirmwareDirectory)
+		if err != nil {
+			model.ErrorMsg = fmt.Sprintf("Impossible de lister les fichiers du dossier du firmware: %s", err)
+			logger.Log.Error().Err(err).Msg("Failed to list firmware directory files")
+			return Render(c, 422, views.FirmwarePage(model))
+		}
+
+		if len(dirEntries) > 1 {
+			model.ErrorMsg = "Impossible de déterminer la version du firmware, plus d'un fichier présent dans le dossier du firmware"
+			logger.Log.Error().Msg("Failed to determine firmware version, more than 1 file present int the firmware directory")
+			return Render(c, 422, views.FirmwarePage(model))
+		}
+
+		if len(dirEntries) == 1 {
+			model.CurrentVersion = strings.Split(dirEntries[0].Name(), ".bin")[0]
+		} else {
+			model.CurrentVersion = "none"
+		}
+
+		if model.RunningVersion == "" {
+			model.RunningVersion = "none"
+		} else {
+			model.RunningVersion = gateModel.RunningVersion
+		}
+
+		return Render(c, 200, views.FirmwarePage(model))
+	})
+
+	adminGroup.PUT("/firmware", func(c echo.Context) error {
+		firmware, err := c.FormFile("firmware")
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to get firmware file")
+			return Render(c, 422, views.FirmwareUpdateResult(fmt.Sprintf("Impossible de récupérer le fichier uploadé : %s", err)))
+		}
+
+		src, err := firmware.Open()
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to open uploaded firmware file")
+			return Render(c, 422, views.FirmwareUpdateResult(fmt.Sprintf("Impossible d'ouvrir le fichier envoyé : %s", err)))
+		}
+		defer src.Close()
+
+		dst, err := os.Create(path.Join(config.Config.Gate.FirmwareDirectory, firmware.Filename))
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to create new firmware file")
+			return Render(c, 422, views.FirmwareUpdateResult(fmt.Sprintf("Échec de la création du fichier : %s", err)))
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, src); err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to save firmware")
+			return Render(c, 422, views.FirmwareUpdateResult(fmt.Sprintf("Échec de l'enregirstement du firmware : %s", err)))
+		}
+
+		logger.Log.Info().Str("firmware", firmware.Filename).Str("save path", config.Config.Gate.FirmwareDirectory).Msg("New firmware uploaded")
+
+		return Render(c, 200, views.FirmwareUpdateResult(""))
 	})
 }
 

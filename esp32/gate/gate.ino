@@ -1,9 +1,12 @@
-#include <WiFiClientSecure.h>
-#include <WiFiClient.h>
+#include <NetworkClientSecure.h>
+#include <NetworkClient.h>
+#include <HTTPUpdate.h>
 #include <WiFi.h>
 #include "config.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
+
+#define VERSION "1.0.0"
 
 #ifndef API_SECRET_KEY
 #define API_SECRET_KEY "dev_API_SECRET_KEY"
@@ -19,12 +22,15 @@
 #define PROTOCOL "http"
 #endif
 
+#define STR(x) #x
+#define FIRMWARE_URL PROTOCOL "://" API_DOMAIN ":" STR(API_PORT) "/gate/firmware"
+
 const uint8_t PIN_RELAY = 13;
 const uint8_t PIN_POWER = 14;
 
 const char *http_request_format =
   "GET %s HTTP/1.0\r\n"
-  "Host: %s:%d\r\n"
+  "Host: %s:%s\r\n"
   "Connection: close\r\n"
   "Authorization: %s\r\n"
   "\r\n";
@@ -51,13 +57,24 @@ void loop() {
   connectToWiFi(selectWifi());
 
 #ifdef SECURED
-  WiFiClientSecure client;
+  NetworkClientSecure client;
   client.setCACert(ssl_root_ca);
 #else
-  WiFiClient client;
+  NetworkClient client;
 #endif
+  client.setTimeout(60000);
+
+  Serial.println("Checking for updates...");
+  switch (httpUpdate.update(client, FIRMWARE_URL, VERSION)) {
+    case HTTP_UPDATE_FAILED: Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str()); break;
+    case HTTP_UPDATE_NO_UPDATES: Serial.println("Already up to date."); break;`
+    case HTTP_UPDATE_OK: Serial.println("Updated !"); break;
+  }
 
   while (WiFi.status() == WL_CONNECTED) {
+    setClock();
+
+
     if (!client.connect(API_DOMAIN, API_PORT)) {
       Serial.println("Connection failed! Retrying in 1s.");
       delay(5 * 1000);
@@ -76,7 +93,7 @@ void loop() {
     int status = 0;
     while (client.connected()) {
       Serial.printf("\r%4d ", WiFi.RSSI());
-      String line = client.readStringUntil('\r\n');
+      String line = client.readStringUntil('\n');
       if (line.startsWith("HTTP")) {
         status = (line[9] - 48) * 100 + (line[10] - 48) * 10 + (line[11] - 48);
         Serial.printf("\r\nReceived status: %d\r\n", status);
@@ -153,7 +170,7 @@ int selectWifi() {
     Serial.printf(" %d WiFi found:\r\n", found_wifis);
 
     for (int16_t i = 0; i < found_wifis; i++) {
-      Serial.printf("\t- SSID: %s | RSSI: %d ", WiFi.SSID(i),  WiFi.RSSI(i));
+      Serial.printf("\t- SSID: %s | RSSI: %ld ", WiFi.SSID(i).c_str(),  WiFi.RSSI(i));
 
       if (WiFi.RSSI(i) < best_signal) {
         Serial.println("(worse)");
@@ -188,4 +205,24 @@ int findWifiId(String ssid) {
   }
 
   return -1;
+}
+
+// Set time via NTP, as required for x.509 validation
+void setClock() {
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");  // UTC
+
+  Serial.print(F("Waiting for NTP time sync: "));
+  time_t now = time(nullptr);
+  while (now < 8 * 3600 * 2) {
+    yield();
+    delay(500);
+    Serial.print(F("."));
+    now = time(nullptr);
+  }
+
+  Serial.println(F(""));
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  Serial.print(F("Current time: "));
+  Serial.print(asctime(&timeinfo));
 }

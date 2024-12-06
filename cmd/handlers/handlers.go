@@ -93,7 +93,8 @@ func RegisterValidationTranslation(tag string, message string) {
 }
 
 type Model struct {
-	Gates chan struct{}
+	Gates          chan struct{}
+	RunningVersion string
 }
 
 func NewModel() Model {

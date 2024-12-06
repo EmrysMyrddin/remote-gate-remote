@@ -34,6 +34,7 @@ COPY --from=builder /usr/src/app/build/cmd /app
 COPY --from=builder /usr/src/app/static /static
 COPY --from=builder /usr/src/app/static/js/htmx.min.js /static/js/htmx.min.js
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+RUN mkdir -p /usr/src/app/firmwares
 
 EXPOSE 80
 CMD ["/app"]

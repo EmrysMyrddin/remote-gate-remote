@@ -1,0 +1,42 @@
+package views
+
+import "woody-wood-portail/views/components"
+
+type FirmwarePageModel struct {
+  ErrorMsg string
+  CurrentVersion string
+  RunningVersion string
+}
+
+templ FirmwarePage(model FirmwarePageModel) {
+  @html("Firmware") {
+    @components.Form("Mise à jour du firmware", components.FormModel{}, "PUT", templ.Attributes{"hx-target": "#result", "hx-encoding": "multipart/form-data"}) {
+      if model.ErrorMsg != "" {
+        La version actuelle du firmware n'a pas pu être déterminée
+        @components.Alert("error") {
+          {model.ErrorMsg}
+        }
+      } else {
+        <p>Firmware en ligne : {model.CurrentVersion}</p>
+        <p>Firmware en cours : {model.RunningVersion} </p>
+        <input type="file" name="firmware"/>
+        @components.Button() {
+          Mettre à jour
+        }
+        <div id="result"></div>
+      }
+    }
+  }
+}
+
+templ FirmwareUpdateResult(errorMsg string) {
+  if errorMsg == "" {
+    @components.Alert("success") {
+      Le firmware a été mis à jour.
+    }
+  } else {
+    @components.Alert("error") {
+      {errorMsg}
+    }
+  }
+}

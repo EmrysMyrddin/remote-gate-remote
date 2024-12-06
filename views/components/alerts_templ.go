@@ -64,23 +64,25 @@ func Alert(kind string, attrs ...templ.Attributes) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if autoClose, ok := attrs[0]["autoClose"]; ok {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<script data-delay=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(autoClose.(int)))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/alerts.templ`, Line: 11, Col: 55}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">\n        (() => {\n          const delay = Number(document.currentScript.getAttribute('data-delay'))\n          if(!delay) {\n            return\n          }\n\n          const alert = document.currentScript.closest(\".alert\");\n          setTimeout(() => alert.parentNode.removeChild(alert), delay * 1000);\n        })()\n      </script>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+		if expect1(attrs) != nil {
+			if autoClose, ok := attrs[0]["autoClose"]; ok {
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<script data-delay=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var4 string
+				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(autoClose.(int)))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components/alerts.templ`, Line: 12, Col: 57}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">\n          (() => {\n            const delay = Number(document.currentScript.getAttribute('data-delay'))\n            if(!delay) {\n              return\n            }\n\n            const alert = document.currentScript.closest(\".alert\");\n            setTimeout(() => alert.parentNode.removeChild(alert), delay * 1000);\n          })()\n        </script>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div>")

@@ -13,3 +13,4 @@
 !.yarn/versions
 
 .env
+esp32/gate/build
