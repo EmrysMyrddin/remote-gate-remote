@@ -165,7 +165,7 @@ func RegisterForm(model c.FormModel) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = c.Field(c.FieldModel{FormModel: model,
-				Label: "Nom complet", Name: "FullName", Required: true, Attrs: templ.Attributes{"autocomplete": "name"},
+				Label: "Nom et Prénom", Name: "FullName", Required: true, Attrs: templ.Attributes{"autocomplete": "name"},
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

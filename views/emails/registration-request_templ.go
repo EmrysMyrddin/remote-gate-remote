@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import "woody-wood-portail/cmd/services/db"
+import "woody-wood-portail/cmd/config"
 
 func RegistrationRequest(user db.User, url templ.SafeURL) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -35,7 +36,7 @@ func RegistrationRequest(user db.User, url templ.SafeURL) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(user.FullName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/registration-request.templ`, Line: 8, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/registration-request.templ`, Line: 9, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -57,7 +58,7 @@ func RegistrationRequest(user db.User, url templ.SafeURL) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(url))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/registration-request.templ`, Line: 14, Col: 118}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/emails/registration-request.templ`, Line: 15, Col: 118}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -115,7 +116,16 @@ func RegistrationRequestAccepted(user db.User) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Demande d'inscription acceptée</h1><p>Votre demande d'inscription à bien été acceptée. Vous pouvez désormais vous connecter à Woody Wood Gate.</p>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Demande d'inscription acceptée</h1><p>Votre demande d'inscription à bien été acceptée.</p><p><a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 templ.SafeURL = templ.SafeURL(config.Config.Http.BaseURL + "/user")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var7)))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">Vous pouvez désormais vous connecter à Woody Wood Gate.</a></p><p>Aucune application n'est a télécharger, tout se passe sur le site. Vous pouvez l'ajouter à vos favoris ou à l'écran d'acceuil de votre téléphone pour y accéder rapidement.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -136,9 +146,9 @@ func RegistrationRequestRejected(user db.User) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var7 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var7 == nil {
-			templ_7745c5c3_Var7 = templ.NopComponent
+		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var8 == nil {
+			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Demande d'inscription acceptée</h1><p>Votre demande d'inscription à été rejetée. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter le conseil syndical.</p>")

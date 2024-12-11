@@ -1,6 +1,7 @@
 package emails
 
 import "woody-wood-portail/cmd/services/db"
+import "woody-wood-portail/cmd/config"
 
 templ RegistrationRequest(user db.User, url templ.SafeURL) {
 	<h1>Nouvelle demande d'inscription</h1>
@@ -25,7 +26,16 @@ templ RegistrationRequestPending(user db.User) {
 templ RegistrationRequestAccepted(user db.User) {
 	<h1>Demande d'inscription acceptée</h1>
 	<p>
-		Votre demande d'inscription à bien été acceptée. Vous pouvez désormais vous connecter à Woody Wood Gate.
+		Votre demande d'inscription à bien été acceptée.
+	</p>
+
+	<p>
+		<a href={templ.SafeURL(config.Config.Http.BaseURL+"/user")}>Vous pouvez désormais vous connecter à Woody Wood Gate.</a>
+	</p>
+
+	<p>
+		Aucune application n'est a télécharger, tout se passe sur le site.
+		Vous pouvez l'ajouter à vos favoris ou à l'écran d'acceuil de votre téléphone pour y accéder rapidement.
 	</p>
 }
 

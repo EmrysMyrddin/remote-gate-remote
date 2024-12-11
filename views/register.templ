@@ -43,7 +43,7 @@ templ RegisterForm(model c.FormModel) {
 		})
 		<hr class="m-4"/>
 		@c.Field(c.FieldModel{FormModel: model,
-			Label: "Nom complet", Name: "FullName", Required: true, Attrs: templ.Attributes{"autocomplete": "name"},
+			Label: "Nom et Prénom", Name: "FullName", Required: true, Attrs: templ.Attributes{"autocomplete": "name"},
 		})
 		@c.Field(c.FieldModel{FormModel: model,
 			Label: "Numéro d'appartement (ex: A001)", Name: "Apartment", Required: true, Attrs: templ.Attributes{"maxlength": "4", "minlength": "3", "autocapitalize": "characters"},
