@@ -26,7 +26,7 @@ type config struct {
 
 	Users struct {
 		RenewalInterval string `mapstructure:"renewal_interval"`
-		ReminderDays    string `mapstructure:"reminder_days`
+		ReminderDays    string `mapstructure:"reminder_days"`
 	}
 
 	Gate struct {

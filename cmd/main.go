@@ -26,7 +26,6 @@ import (
 
 var dailyCronJobs = map[string]func(){
 	"logs cleanup":                 db.DeleteOldLogs,
-	"code cycle":                   db.CycleRegistrationCode,
 	"registration expiration mail": sendExpiredRegistrationMails,
 	"disable expired accounts":     disableExpiredAccounts,
 	"delete old accounts":          deleteOldAccounts,
@@ -53,8 +52,6 @@ func main() {
 		}
 	}
 	c.Start()
-
-	db.CycleRegistrationCode()
 
 	e := echo.New()
 
