@@ -1,6 +1,6 @@
-FROM golang:1.22-bullseye as builder
+FROM golang:1.22-bullseye AS builder
 
-ENV NODE_VERSION 22.6.0
+ENV NODE_VERSION=22.6.0
 
 RUN apt update && apt install xz-utils
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
@@ -34,7 +34,6 @@ COPY --from=builder /usr/src/app/build/cmd /app
 COPY --from=builder /usr/src/app/static /static
 COPY --from=builder /usr/src/app/static/js/htmx.min.js /static/js/htmx.min.js
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
-RUN mkdir -p /usr/src/app/firmwares
 
 EXPOSE 80
 CMD ["/app"]
