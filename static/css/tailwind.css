@@ -566,8 +566,8 @@ video {
   inset: 0px;
 }
 
-.right-2 {
-  right: 0.5rem;
+.right-4 {
+  right: 1rem;
 }
 
 .top-2 {
@@ -664,8 +664,8 @@ video {
   gap: 0.5rem;
 }
 
-.overflow-scroll {
-  overflow: scroll;
+.overflow-auto {
+  overflow: auto;
 }
 
 .rounded {

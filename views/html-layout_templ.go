@@ -39,7 +39,7 @@ func html(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</title><link href=\"/static/css/tailwind.css\" rel=\"stylesheet\"></head><body><p class=\"absolute top-2 right-2 text-sm text-blue-300 print:hidden\"><a href=\"mailto:v.cocaud+wwg@gmail.com\">Besoin d'aide ?</a></p>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</title><link href=\"/static/css/tailwind.css\" rel=\"stylesheet\"></head><body><p class=\"absolute top-2 right-4 text-sm text-blue-300 print:hidden\"><a href=\"mailto:v.cocaud+wwg@gmail.com\">🛟 Besoin d'aide ?</a></p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
