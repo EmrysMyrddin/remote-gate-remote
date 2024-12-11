@@ -31,6 +31,12 @@ update "users" set registration_state = 'accepted' where id = $1 returning *;;
 -- name: RegistrationRejected :one
 update "users" set registration_state = 'rejected' where id = $1 returning *;
 
+-- name: RegistrationSuspended :one
+update "users" set registration_state = 'suspended' where id = $1 returning *;
+
+-- name: RenewRegistration :one
+update "users" set registration_state = 'accepted', last_registration = now() where id = $1 returning *;
+
 -- name: UpdatePassword :exec
 update "users" set pwd_salt = $2, pwd_hash = $3, pwd_iterations = $4, pwd_parallelism = $5, pwd_memory = $6, pwd_version = $7 where id = $1;
 
@@ -60,3 +66,9 @@ select code from "registration_code";
 
 -- name: SetRegistrationCode :exec
 insert into "registration_code" (id, code) values (1, $1) on conflict (id) do update set code = $1;
+
+-- name: CycleRegistrationCode :execrows
+update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, "0") where updated_at < now() - interval '2 month';
+
+-- name: ListUsersRegisteredSince :many
+select * from "users" where last_registration + sqlc.arg(since)::text::interval >= current_date  and last_registration + sqlc.arg(since)::text::interval < current_date + interval '1 day' ;

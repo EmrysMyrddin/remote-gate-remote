@@ -99,6 +99,8 @@ func resultCSS(kind string) string {
 		return "border border-green-500 bg-green-100 text-center"
 	case "error":
 		return "border border-red-500 bg-red-100"
+	case "warning":
+		return "border border-orange-500 bg-orange-100"
 	default:
 		panic("unknown kind:" + kind)
 	}

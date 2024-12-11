@@ -1,0 +1,44 @@
+package views
+
+import (
+  "woody-wood-portail/cmd/ctx/auth"
+	c "woody-wood-portail/views/components"
+  "net/url"
+)
+
+type RegistrationRenewalFormValues struct {
+	InvitationCode string `form:"InvitationCode" tr:"Code d'invitation" validate:"required,len=6,number,invitation_code"`
+}
+
+templ RegistrationRenewalPage(code string) {
+  @html("Renouvelement d'inscription") {
+    @RegistrationRenewalForm(c.FormModel{
+      Values: url.Values{"InvitationCode": []string{code}},
+    })
+    @c.AuthFooter() {
+      <a href="/user" class="text-blue-500">⬅️ Retours à l'application</a>
+    }
+  }
+}
+
+templ RegistrationRenewalForm(model c.FormModel) {
+  @c.Form("Renouvelement d'inscription", model, "PUT") {
+    if auth.GetUserFromTempl(ctx).RegistrationState == "suspended" {
+      @c.Alert("error") {
+        Votre compte est suspendu.
+      }
+    }
+
+    <p>
+      Si vous habitez toujours la résidence, vous pouvez renouveler votre compte en entrant le code d'inscription:
+    </p>
+
+    @c.Field(c.FieldModel{FormModel: model,
+      Label: "Code d'invitation", Name: "InvitationCode", Required: true, Attrs: templ.Attributes{"autocomplete": "one-time-code"},
+    })
+
+    @c.Button(templ.Attributes{"type": "submit"}) {
+			Renouveler
+		}
+  }
+}

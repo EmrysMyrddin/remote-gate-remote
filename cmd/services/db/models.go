@@ -44,4 +44,5 @@ type User struct {
 	CreatedAt         pgtype.Timestamp
 	UpdatedAt         pgtype.Timestamp
 	RegistrationState string
+	LastRegistration  pgtype.Timestamp
 }

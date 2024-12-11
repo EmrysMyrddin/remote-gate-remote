@@ -39,8 +39,13 @@ func RequireAuthGroup(e *echo.Echo) RequireAuth {
 			logger.Log.Debug().Err(err).Msg("not verified, redirecting to /verify")
 			RedirectWitQuery(c, "/verify")
 		} else if errors.Is(err, auth.ErrRegistrationNotAccepted) {
-			logger.Log.Debug().Err(err).Msg("registration not accepted, redirecting to /pending-registration")
-			RedirectWitQuery(c, "/pending-registration")
+			if c.Get("user").(db.User).RegistrationState == "suspended" {
+				logger.Log.Debug().Err(err).Msg("registration not accepted, redirecting to /renew-registration")
+				RedirectWitQuery(c, "/renew-registration")
+			} else {
+				logger.Log.Debug().Err(err).Msg("registration not accepted, redirecting to /pending-registration")
+				RedirectWitQuery(c, "/pending-registration")
+			}
 		} else if errors.Is(err, auth.ErrJWTMissing) {
 			logger.Log.Debug().Err(err).Msg("not logged in, redirecting to /login")
 			RedirectWitQuery(c, "/login?redirect="+url.QueryEscape(c.Request().URL.Path))
@@ -67,8 +72,9 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 	authGroup.GET("/register", func(c echo.Context) error {
 		if ctx.IsAuthenticated(c) {
-			return RedirectWitQuery(c, "/user/")
+			return RedirectWitQuery(c, "/renew-registration")
 		}
+
 		return Render(c, 200, views.RegisterPage(c.QueryParam("code")))
 	})
 
@@ -272,6 +278,55 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		return Render(c, 200, views.PendingRegistrationPage())
 	})
 
+	authGroup.GET("/renew-registration", func(c echo.Context) error {
+		if !ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/login")
+		}
+
+		return Render(c, 200, views.RegistrationRenewalPage(c.QueryParam("code")))
+	})
+
+	authGroup.PUT("/renew-registration", func(c echo.Context) error {
+		if !ctx.IsAuthenticated(c) {
+			return RedirectWitQuery(c, "/login")
+		}
+
+		currentUser := ctx.GetUserFromEcho(c)
+
+		values, rawValues, err := Bind[views.RegistrationRenewalFormValues](c)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Unable to get form params")
+			return Render(c, 422, views.RegistrationRenewalForm(components.NewFormError("Erreur inatendue")))
+		}
+
+		model := components.NewFormModel(rawValues, Validate(c, values))
+		if len(model.Errors.Fields) != 0 {
+			return Render(c, 422, views.RegistrationRenewalForm(model))
+		}
+
+		if _, err := db.Q(c).RenewRegistration(c.Request().Context(), currentUser.ID); err != nil {
+			logger.Log.Error().Err(err).Stringer("user", currentUser.ID).Msg("failed to save registration renewal")
+			model.Errors.Global = "Erreur inatendue"
+			return Render(c, 422, views.RegistrationRenewalForm(model))
+		}
+
+		if err := mails.SendMail(c.Request().Context(), currentUser,
+			"Inscription à Woody Wood Gate renouvellée",
+			emails.RegistrationRenewed(),
+		); err != nil {
+			logger.Log.Error().Err(err).Stringer("user", currentUser.ID).Msg("failed to send renewal confirmation email")
+			// Don't report this error to user nor rollback, it's just a notification mail
+		}
+
+		if err := db.Commit(c); err != nil {
+			logger.Log.Error().Err(err).Stringer("user", currentUser.ID).Msg("failed to commit while renewing registration")
+			model.Errors.Global = "Erreur inatendue"
+			return Render(c, 422, views.RegistrationRenewalForm(model))
+		}
+
+		return Redirect(c, "/user")
+	})
+
 	authGroup.GET("/password-forgotten", func(c echo.Context) error {
 		resetError := c.QueryParam("error")
 		logger.Log.Info().Str("error", resetError).Msg("Password forgotten error")
@@ -313,7 +368,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		resetURL := fmt.Sprintf("%s/reset-password?code=%s", config.Config.Http.BaseURL, resetToken)
 
-		err = mails.SendMail(c,
+		err = mails.SendMail(c.Request().Context(),
 			user,
 			"Réinitialisation de votre mot de passe Woody Wood Gate",
 			emails.PasswordReset(user, templ.SafeURL(resetURL)),
@@ -433,7 +488,7 @@ func sendVerificationMail(c echo.Context, user db.User) error {
 
 	verificationURL := fmt.Sprintf("%s/verify?code=%s", config.Config.Http.BaseURL, mailVerifToken)
 
-	err = mails.SendMail(c,
+	err = mails.SendMail(c.Request().Context(),
 		user,
 		"Votre lien de vérification de compte Woody Wood Gate",
 		emails.EmailVerification(user, templ.SafeURL(verificationURL)),
@@ -455,7 +510,7 @@ func sendRegistrationRequestMail(c echo.Context, user db.User) error {
 
 	errs := make([]error, 0, len(admins))
 	for _, admin := range admins {
-		if err := mails.SendMail(c,
+		if err := mails.SendMail(c.Request().Context(),
 			admin,
 			"Nouvelle demande d'inscription sur Woody Wood Gate",
 			emails.RegistrationRequest(user, templ.SafeURL(adminURL)),
@@ -474,7 +529,7 @@ func sendRegistrationRequestMail(c echo.Context, user db.User) error {
 		return fmt.Errorf("unable to send registration request email: all mail tentative failed")
 	}
 
-	if err = mails.SendMail(c,
+	if err = mails.SendMail(c.Request().Context(),
 		user,
 		"Demande d'inscription sur Woody Wood Gate",
 		emails.RegistrationRequestPending(user),

@@ -29,7 +29,7 @@ values (
   (select (case when count(id) = 0 then 'admin' else 'user' end) role from "users"),
   (select (case when count(id) = 0 then 'accepted' else 'new' end) registration_state from "users")
 ) 
-returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 type CreateUserParams struct {
@@ -73,8 +73,21 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
+}
+
+const cycleRegistrationCode = `-- name: CycleRegistrationCode :execrows
+update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, "0") where updated_at < now() - interval '2 month'
+`
+
+func (q *Queries) CycleRegistrationCode(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, cycleRegistrationCode)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteOldLogs = `-- name: DeleteOldLogs :execrows
@@ -90,7 +103,7 @@ func (q *Queries) DeleteOldLogs(ctx context.Context) (int64, error) {
 }
 
 const deleteUser = `-- name: DeleteUser :one
-delete from "users" where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+delete from "users" where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -112,6 +125,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
@@ -146,7 +160,7 @@ func (q *Queries) GetRegistrationCode(ctx context.Context) (string, error) {
 }
 
 const getUser = `-- name: GetUser :one
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state from "users" where id = $1
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration from "users" where id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -168,12 +182,13 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state from "users" where email = $1
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration from "users" where email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -195,6 +210,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
@@ -248,7 +264,7 @@ func (q *Queries) ListLogsByUser(ctx context.Context, userID uuid.UUID) ([]Log, 
 }
 
 const listUsers = `-- name: ListUsers :many
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state from "users"
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration from "users"
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -276,6 +292,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RegistrationState,
+			&i.LastRegistration,
 		); err != nil {
 			return nil, err
 		}
@@ -288,7 +305,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const listUsersByRole = `-- name: ListUsersByRole :many
-select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state from "users" where role = $1
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration from "users" where role = $1
 `
 
 func (q *Queries) ListUsersByRole(ctx context.Context, role string) ([]User, error) {
@@ -316,6 +333,48 @@ func (q *Queries) ListUsersByRole(ctx context.Context, role string) ([]User, err
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RegistrationState,
+			&i.LastRegistration,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersRegisteredSince = `-- name: ListUsersRegisteredSince :many
+select id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration from "users" where last_registration + $1::text::interval >= current_date  and last_registration + $1::text::interval < current_date + interval '1 day'
+`
+
+func (q *Queries) ListUsersRegisteredSince(ctx context.Context, since string) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersRegisteredSince, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.FullName,
+			&i.Apartment,
+			&i.PwdSalt,
+			&i.PwdHash,
+			&i.PwdIterations,
+			&i.PwdParallelism,
+			&i.PwdMemory,
+			&i.PwdVersion,
+			&i.Role,
+			&i.EmailVerified,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RegistrationState,
+			&i.LastRegistration,
 		); err != nil {
 			return nil, err
 		}
@@ -328,7 +387,7 @@ func (q *Queries) ListUsersByRole(ctx context.Context, role string) ([]User, err
 }
 
 const registrationAccepted = `-- name: RegistrationAccepted :one
-update "users" set registration_state = 'accepted' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+update "users" set registration_state = 'accepted' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 func (q *Queries) RegistrationAccepted(ctx context.Context, id uuid.UUID) (User, error) {
@@ -350,12 +409,13 @@ func (q *Queries) RegistrationAccepted(ctx context.Context, id uuid.UUID) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
 
 const registrationPending = `-- name: RegistrationPending :one
-update "users" set registration_state = 'pending' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+update "users" set registration_state = 'pending' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 func (q *Queries) RegistrationPending(ctx context.Context, id uuid.UUID) (User, error) {
@@ -377,12 +437,13 @@ func (q *Queries) RegistrationPending(ctx context.Context, id uuid.UUID) (User, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
 
 const registrationRejected = `-- name: RegistrationRejected :one
-update "users" set registration_state = 'rejected' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+update "users" set registration_state = 'rejected' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 func (q *Queries) RegistrationRejected(ctx context.Context, id uuid.UUID) (User, error) {
@@ -404,6 +465,63 @@ func (q *Queries) RegistrationRejected(ctx context.Context, id uuid.UUID) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
+	)
+	return i, err
+}
+
+const registrationSuspended = `-- name: RegistrationSuspended :one
+update "users" set registration_state = 'suspended' where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
+`
+
+func (q *Queries) RegistrationSuspended(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, registrationSuspended, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.Apartment,
+		&i.PwdSalt,
+		&i.PwdHash,
+		&i.PwdIterations,
+		&i.PwdParallelism,
+		&i.PwdMemory,
+		&i.PwdVersion,
+		&i.Role,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RegistrationState,
+		&i.LastRegistration,
+	)
+	return i, err
+}
+
+const renewRegistration = `-- name: RenewRegistration :one
+update "users" set registration_state = 'accepted', last_registration = now() where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
+`
+
+func (q *Queries) RenewRegistration(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, renewRegistration, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.Apartment,
+		&i.PwdSalt,
+		&i.PwdHash,
+		&i.PwdIterations,
+		&i.PwdParallelism,
+		&i.PwdMemory,
+		&i.PwdVersion,
+		&i.Role,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }
@@ -445,7 +563,7 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 }
 
 const updateUserInfo = `-- name: UpdateUserInfo :one
-update "users" set "role" = $2, full_name = $3, apartment = $4, email = $5 where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state
+update "users" set "role" = $2, full_name = $3, apartment = $4, email = $5 where id = $1 returning id, email, full_name, apartment, pwd_salt, pwd_hash, pwd_iterations, pwd_parallelism, pwd_memory, pwd_version, role, email_verified, created_at, updated_at, registration_state, last_registration
 `
 
 type UpdateUserInfoParams struct {
@@ -481,6 +599,7 @@ func (q *Queries) UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RegistrationState,
+		&i.LastRegistration,
 	)
 	return i, err
 }

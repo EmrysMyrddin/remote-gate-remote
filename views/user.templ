@@ -3,11 +3,20 @@ package views
 import (
 	"woody-wood-portail/cmd/ctx/auth"
 	components "woody-wood-portail/views/components"
+	"time"
 )
 
 templ UserPage(isOnline bool) {
 	@html("Woody Wood Gate") {
 		@components.Card("Woody Wood Gate") {
+
+			if auth.GetUserFromTempl(ctx).LastRegistration.Time.AddDate(0, 2, -7).After(time.Now()) {
+				@components.Alert("warning") {
+					Votre compte expire bientôt ! <br/>
+					<a href="/renew-registration" class="text-blue-500">Renouveler votre inscription</a>.
+				}
+			}
+
 			<p>
 				if isOnline {
 					🟢 Le portail est <span class="text-green-500">connecté</span>

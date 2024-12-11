@@ -11,14 +11,25 @@ import (
 	"woody-wood-portail/cmd/handlers"
 	"woody-wood-portail/cmd/logger"
 	"woody-wood-portail/cmd/services/db"
+	"woody-wood-portail/cmd/services/mails"
 	"woody-wood-portail/cmd/timezone"
+	"woody-wood-portail/views/emails"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/robfig/cron"
+	"github.com/rs/zerolog"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+var dailyCronJobs = map[string]func(){
+	"logs cleanup":                 db.DeleteOldLogs,
+	"code cycle":                   db.CycleRegistrationCode,
+	"registration expiration mail": sendExpiredRegistrationMails,
+	"disable expired accounts":     disableExpiredAccounts,
+	"delete old accounts":          deleteOldAccounts,
+}
 
 func main() {
 	db.Migrate()
@@ -29,13 +40,16 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Cron task to delete old logs after 1 year. We do it every day at midnight.
 	c := cron.NewWithLocation(timezone.TZ)
-	err = c.AddFunc("@daily", func() {
-		db.DeleteOldLogs()
-	})
-	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("failed to add cron job")
+
+	// Register all cron jobs as daily jobs.
+	// This is to avoid missing deadlines if the server restarts.
+	// TODO: Implement a proper Schedule to run jobs only when needed
+	for job, handler := range dailyCronJobs {
+		err = c.AddFunc("@daily", handler)
+		if err != nil {
+			logger.Log.Fatal().Err(err).Str("job", job).Msg("failed to add cron job")
+		}
 	}
 	c.Start()
 
@@ -92,4 +106,101 @@ type CustomValidator struct {
 
 func (cv *CustomValidator) Validate(i interface{}) error {
 	return cv.validator.Struct(i)
+}
+
+func sendExpiredRegistrationMails() {
+	sendExpiredRegistrationMailsFor("7")
+	sendExpiredRegistrationMailsFor("3")
+	sendExpiredRegistrationMailsFor("1")
+}
+
+func sendExpiredRegistrationMailsFor(days string) {
+	logger.Log.Info().Msg("sending reminder mail to renew registrations")
+
+	usersToRemind, err := db.ListUsersRegisteredSince("2 months -" + days + " days")
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("failed to list users expiring in " + days + " days")
+		return
+	}
+	logger.Log.Debug().Str("days", days).Array("users", zerolog.Arr().Interface(usersToRemind)).Msg("sending reminder mail to renew registration")
+
+	for _, user := range usersToRemind {
+		err := mails.SendMail(context.Background(), user,
+			"Votre inscription à Woody Wood gate va expirer dans "+days+" jours",
+			emails.RegistrationWillExpire(days+" jours"),
+		)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("failed to send " + days + " days registration expiration mail")
+			continue
+		}
+		logger.Log.Info().Str("user", user.Email).Msg("sent " + days + " days registration expiration mail")
+	}
+}
+
+func disableExpiredAccounts() {
+	logger.Log.Info().Msg("checking for users to suspend")
+	queries := db.QGlobal()
+
+	usersToDisable, err := queries.ListUsersRegisteredSince(context.Background(), "2 months")
+
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("failed to list expired users to disable")
+		return
+	}
+
+	for _, user := range usersToDisable {
+		if _, err := db.QGlobal().RegistrationSuspended(context.Background(), user.ID); err != nil {
+			logger.Log.Error().Err(err).Stringer("user", user.ID).Msg("failed to suspend user")
+			continue
+		}
+
+		err := mails.SendMail(context.Background(), user,
+			"Votre compte Woody Wood Gate a été suspendu",
+			emails.RegistrationSuspended(),
+		)
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("failed to send user expiration email")
+			continue
+		}
+
+		logger.Log.Info().Stringer("user", user.ID).Msg("user account suspended")
+	}
+}
+
+func deleteOldAccounts() {
+	logger.Log.Info().Msg("checking for users to delete")
+	q := db.QGlobal()
+
+	usersToDelete, err := db.QGlobal().ListUsersRegisteredSince(context.Background(), "1 year 2 months")
+
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("failed to list old users to delete")
+		return
+	}
+
+	if len(usersToDelete) == 0 {
+		logger.Log.Info().Msg("no old users to delete detected")
+		return
+	}
+
+	logger.Log.Debug().Array("found users to delete", zerolog.Arr().Interface(usersToDelete)).Msg("users")
+
+	for _, user := range usersToDelete {
+		deleted, err := q.DeleteUser(context.Background(), user.ID)
+		if err != nil {
+			logger.Log.Error().Err(err).Stringer("user", user.ID).Msg("failed to delete old user")
+			continue
+		}
+
+		logger.Log.Info().Interface("deleted user", deleted).Msg("old user deleted")
+		if err := mails.SendMail(context.Background(), deleted,
+			"Votre compte Woody Wood Gate a été supprimé",
+			emails.AccountDeleted(),
+		); err != nil {
+			logger.Log.Error().Str("email", deleted.Email).Err(err).Msg("failed to send deleted account notification")
+			// We can ignore the error, it's just a notification
+		}
+	}
+
+	logger.Log.Info().Array("deleted users", zerolog.Arr().Interface(usersToDelete)).Msg("old users deleted")
 }

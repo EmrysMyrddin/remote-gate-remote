@@ -1,6 +1,7 @@
 package mails
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"woody-wood-portail/cmd/config"
@@ -8,7 +9,6 @@ import (
 	"woody-wood-portail/cmd/services/db"
 
 	"github.com/a-h/templ"
-	"github.com/labstack/echo/v4"
 	"github.com/mailjet/mailjet-apiv3-go/v4"
 )
 
@@ -16,9 +16,9 @@ var (
 	mailjetClient = mailjet.NewMailjetClient(config.Config.Mail.APIKey, config.Config.Mail.SecretKey)
 )
 
-func SendMail(c echo.Context, recipient db.User, subject string, body templ.Component) error {
+func SendMail(c context.Context, recipient db.User, subject string, body templ.Component) error {
 	renderedBody := &strings.Builder{}
-	if err := body.Render(c.Request().Context(), renderedBody); err != nil {
+	if err := body.Render(c, renderedBody); err != nil {
 		return fmt.Errorf("failed to render email: %w", err)
 	}
 

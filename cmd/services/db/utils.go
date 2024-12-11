@@ -120,3 +120,26 @@ func DeleteOldLogs() {
 
 	logger.Log.Info().Int64("deleted", nbDeletedLogs).Msg("Old logs deleted")
 }
+
+func CycleRegistrationCode() {
+	queries := New(pool)
+	nbUpdatedCodes, err := queries.CycleRegistrationCode(context.Background())
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("failed to cycle registration code")
+		return
+	}
+
+	if nbUpdatedCodes == 0 {
+		logger.Log.Info().Msg("registration code not cycled, because it's too soon")
+	} else {
+		logger.Log.Info().Msg("registration code have been cycled")
+	}
+}
+
+func ListUsersRegisteredSince(since string) ([]User, error) {
+	return New(pool).ListUsersRegisteredSince(context.Background(), since)
+}
+
+func QGlobal() *Queries {
+	return New(pool)
+}

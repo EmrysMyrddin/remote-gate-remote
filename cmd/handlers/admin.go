@@ -374,7 +374,7 @@ func RequireAdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func sendRegistrationAcceptedMail(c echo.Context, user db.User) error {
-	if err := mails.SendMail(c,
+	if err := mails.SendMail(c.Request().Context(),
 		user,
 		"Inscription sur Woody Wood Gate acceptée",
 		emails.RegistrationRequestAccepted(user),
@@ -386,7 +386,7 @@ func sendRegistrationAcceptedMail(c echo.Context, user db.User) error {
 }
 
 func sendRegistrationRejectedMail(c echo.Context, user db.User) error {
-	if err := mails.SendMail(c,
+	if err := mails.SendMail(c.Request().Context(),
 		user,
 		"Inscription sur Woody Wood Gate refusée",
 		emails.RegistrationRequestRejected(user),

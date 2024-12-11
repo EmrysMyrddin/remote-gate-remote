@@ -1,0 +1,77 @@
+package emails
+
+import (
+  "woody-wood-portail/cmd/config"
+	"fmt"
+)
+
+templ RegistrationWillExpire(until string) {
+  <h1>Votre inscription va bientôt expirer</h1>
+
+  <p>
+    Votre inscription à Woody Wood Gate est sur le point d'expirer.<br/>
+
+    Pour des raisons de sécurité, votre inscription doit être renouvellée tous les 2 mois en entrant 
+    à nouveau le code d'inscription se trouvant dans la résidence.<br/>
+  </p>
+
+  <p>
+    <a href={templ.SafeURL(fmt.Sprintf("%s/renew-registraton", config.Config.Http.BaseURL))}>
+      Veuillez vous rendre sur votre page de renouvellement et entrer le nouveau code d'inscription.
+    </a>
+  </p>
+
+  <p>
+    Sans action de votre part, votre compte sera suspendu dans <strong>{until}</strong>.
+  </p>
+}
+
+templ RegistrationSuspended() {
+  <h1>Compte suspendu</h1>
+
+  <p>Votre compte Woody Wood Gate a été suspendu.</p>
+
+  <p>
+    Pour des raisons de sécurité, votre inscription doit être renouvellée tous les 2 mois en
+    entrant à nouveau le code d'inscription se trouvant dans la réidence.
+  </p>
+
+  <p>
+    Vous n'avez pas entré de code depuis 2 mois, votre compte est désormais suspendu
+    et vous ne pouvez plus ouvrir le portail.
+  </p>
+
+  <p>
+    Si vous habitez toujours la résidence et souhaitez réactiver votre compte, 
+    <a href={templ.SafeURL(fmt.Sprintf("%s/renew-registraton", config.Config.Http.BaseURL))}>
+      veuillez vous rendre sur votre page de renouvellement et entrer le nouveau 
+      code d'inscription.
+    </a> 
+  </p>
+
+  <p>
+    Sans action de votre part, votre compte et toutes les donnés qui lui sont liées,
+    seront supprimés dans 1 an.
+  </p>
+}
+
+templ RegistrationRenewed() {
+  <h1>Inscription renouvelée</h1>
+
+  <p>Votre inscription à Woody Wood Gate a bien été renouvelée.</p>
+}
+
+templ AccountDeleted() {
+  <h1>Votre compte a été supprimé</h1>
+
+  <p>Votre compte Woody Wood Gate a été supprimé.</p>
+
+  <p>
+    Votre compte n'a pas été activé depuis 1 an, conformément a la législation en vigueur,
+    votre compte et toutes les données qui lui sont liées ont été supprimées.
+  </p>
+
+  <p>
+    Si vous pensez qu'il s'agit d'une erreur, veuillez vous rapprocher du conseil syndical.
+  </p>
+}
