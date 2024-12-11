@@ -122,8 +122,7 @@ func DeleteOldLogs() {
 }
 
 func CycleRegistrationCode() {
-	queries := New(pool)
-	nbUpdatedCodes, err := queries.CycleRegistrationCode(context.Background())
+	nbUpdatedCodes, err := QGlobal().CycleRegistrationCode(context.Background(), config.Config.Users.RenewalInterval)
 	if err != nil {
 		logger.Log.Error().Err(err).Msg("failed to cycle registration code")
 		return
@@ -134,10 +133,6 @@ func CycleRegistrationCode() {
 	} else {
 		logger.Log.Info().Msg("registration code have been cycled")
 	}
-}
-
-func ListUsersRegisteredSince(since string) ([]User, error) {
-	return New(pool).ListUsersRegisteredSince(context.Background(), since)
 }
 
 func QGlobal() *Queries {

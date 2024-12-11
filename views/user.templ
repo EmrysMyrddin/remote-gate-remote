@@ -10,7 +10,7 @@ templ UserPage(isOnline bool) {
 	@html("Woody Wood Gate") {
 		@components.Card("Woody Wood Gate") {
 
-			if auth.GetUserFromTempl(ctx).LastRegistration.Time.AddDate(0, 2, -7).After(time.Now()) {
+			if auth.GetUserFromTempl(ctx).LastRegistration.Time.AddDate(0, 2, -7).Before(time.Now()) {
 				@components.Alert("warning") {
 					Votre compte expire bientôt ! <br/>
 					<a href="/renew-registration" class="text-blue-500">Renouveler votre inscription</a>.

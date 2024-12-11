@@ -68,7 +68,7 @@ select code from "registration_code";
 insert into "registration_code" (id, code) values (1, $1) on conflict (id) do update set code = $1;
 
 -- name: CycleRegistrationCode :execrows
-update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, "0") where updated_at < now() - interval '2 month';
+update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, '0') where updated_at < now() - sqlc.arg(max_age)::text::interval;
 
 -- name: ListUsersRegisteredSince :many
 select * from "users" where last_registration + sqlc.arg(since)::text::interval >= current_date  and last_registration + sqlc.arg(since)::text::interval < current_date + interval '1 day' ;

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"strings"
 	"woody-wood-portail/cmd/logger"
 
@@ -23,6 +22,11 @@ type config struct {
 			// MaxAge of the JWT token in days
 			MaxAge int `mapstructure:"max_age"`
 		}
+	}
+
+	Users struct {
+		RenewalInterval string `mapstructure:"renewal_interval"`
+		ReminderDays    string `mapstructure:"reminder_days`
 	}
 
 	Gate struct {
@@ -57,7 +61,9 @@ func init() {
 
 	Config.Gate.Timeout = 60
 	Config.Gate.FirmwareDirectory = "/usr/src/app/firmwares"
-	println(os.Getenv("Gate."))
+
+	Config.Users.ReminderDays = "7, 3, 1"
+	Config.Users.RenewalInterval = "2 months"
 
 	v := viper.New()
 	v.AutomaticEnv()

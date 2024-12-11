@@ -79,11 +79,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const cycleRegistrationCode = `-- name: CycleRegistrationCode :execrows
-update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, "0") where updated_at < now() - interval '2 month'
+update "registration_code" set code = lpad(floor(random() * 899999 + 100000)::text, 6, '0') where updated_at < now() - $1::text::interval
 `
 
-func (q *Queries) CycleRegistrationCode(ctx context.Context) (int64, error) {
-	result, err := q.db.Exec(ctx, cycleRegistrationCode)
+func (q *Queries) CycleRegistrationCode(ctx context.Context, maxAge string) (int64, error) {
+	result, err := q.db.Exec(ctx, cycleRegistrationCode, maxAge)
 	if err != nil {
 		return 0, err
 	}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 	"woody-wood-portail/cmd/config"
 	"woody-wood-portail/cmd/handlers"
@@ -52,6 +53,8 @@ func main() {
 		}
 	}
 	c.Start()
+
+	db.CycleRegistrationCode()
 
 	e := echo.New()
 
@@ -109,15 +112,17 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func sendExpiredRegistrationMails() {
-	sendExpiredRegistrationMailsFor("7")
-	sendExpiredRegistrationMailsFor("3")
-	sendExpiredRegistrationMailsFor("1")
+	reminders := strings.Split(config.Config.Users.ReminderDays, ",")
+
+	for _, days := range reminders {
+		sendExpiredRegistrationMailsFor(strings.TrimSpace(days))
+	}
 }
 
 func sendExpiredRegistrationMailsFor(days string) {
 	logger.Log.Info().Msg("sending reminder mail to renew registrations")
 
-	usersToRemind, err := db.ListUsersRegisteredSince("2 months -" + days + " days")
+	usersToRemind, err := db.QGlobal().ListUsersRegisteredSince(context.Background(), config.Config.Users.RenewalInterval+" -"+days+" days")
 	if err != nil {
 		logger.Log.Error().Err(err).Msg("failed to list users expiring in " + days + " days")
 		return
@@ -139,9 +144,9 @@ func sendExpiredRegistrationMailsFor(days string) {
 
 func disableExpiredAccounts() {
 	logger.Log.Info().Msg("checking for users to suspend")
-	queries := db.QGlobal()
+	q := db.QGlobal()
 
-	usersToDisable, err := queries.ListUsersRegisteredSince(context.Background(), "2 months")
+	usersToDisable, err := q.ListUsersRegisteredSince(context.Background(), config.Config.Users.RenewalInterval)
 
 	if err != nil {
 		logger.Log.Error().Err(err).Msg("failed to list expired users to disable")
@@ -149,7 +154,7 @@ func disableExpiredAccounts() {
 	}
 
 	for _, user := range usersToDisable {
-		if _, err := db.QGlobal().RegistrationSuspended(context.Background(), user.ID); err != nil {
+		if _, err := q.RegistrationSuspended(context.Background(), user.ID); err != nil {
 			logger.Log.Error().Err(err).Stringer("user", user.ID).Msg("failed to suspend user")
 			continue
 		}
@@ -171,7 +176,7 @@ func deleteOldAccounts() {
 	logger.Log.Info().Msg("checking for users to delete")
 	q := db.QGlobal()
 
-	usersToDelete, err := db.QGlobal().ListUsersRegisteredSince(context.Background(), "1 year 2 months")
+	usersToDelete, err := q.ListUsersRegisteredSince(context.Background(), "1 year "+config.Config.Users.RenewalInterval)
 
 	if err != nil {
 		logger.Log.Error().Err(err).Msg("failed to list old users to delete")
