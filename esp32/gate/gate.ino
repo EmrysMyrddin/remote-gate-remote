@@ -106,15 +106,10 @@ void loop() {
     } else if (status == 426) {
       Serial.println("Upgrade needed.");
         Serial.printf("Checking for updates (from %s) ...\n", FIRMWARE_URL);
-        httpUpdate.rebootOnUpdate(false);
         switch (httpUpdate.update(client, FIRMWARE_URL, VERSION)) {
           case HTTP_UPDATE_FAILED: Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\r\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str()); break;
           case HTTP_UPDATE_NO_UPDATES: Serial.printf("Already up to date: %s\r\n", VERSION); break;
-          case HTTP_UPDATE_OK: {
-            Serial.println("Updated !\r\n"); break;
-            Serial.flush();
-            ESP.restart();
-          }
+          case HTTP_UPDATE_OK: Serial.println("Updated !\r\n"); break;
         }
     } else {
       Serial.printf("Unexpected status: %d\r\n", status);
