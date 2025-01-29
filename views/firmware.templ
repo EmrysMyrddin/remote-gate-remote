@@ -17,7 +17,7 @@ templ FirmwarePage(model FirmwarePageModel) {
           {model.ErrorMsg}
         }
       } else {
-        <p>Firmware en ligne : {model.CurrentVersion}</p>
+        <p>Firmware en ligne : <span id="current_version">{model.CurrentVersion}</span></p>
         <p>Firmware en cours : {model.RunningVersion} </p>
         <input type="file" name="firmware"/>
         @components.Button() {
@@ -29,8 +29,9 @@ templ FirmwarePage(model FirmwarePageModel) {
   }
 }
 
-templ FirmwareUpdateResult(errorMsg string) {
+templ FirmwareUpdateResult(version string, errorMsg string) {
   if errorMsg == "" {
+    <span id="current_version" hx-swap-oob="true">{version}</span>
     @components.Alert("success") {
       Le firmware a été mis à jour.
     }

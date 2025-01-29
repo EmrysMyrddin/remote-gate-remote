@@ -6,8 +6,6 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
-#define VERSION "1.0.0"
-
 #ifndef API_SECRET_KEY
 #define API_SECRET_KEY "dev_API_SECRET_KEY"
 #endif
@@ -22,17 +20,20 @@
 #define PROTOCOL "http"
 #endif
 
-#define STR(x) #x
-#define FIRMWARE_URL PROTOCOL "://" API_DOMAIN ":" STR(API_PORT) "/gate/firmware"
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define API_URL PROTOCOL "://" API_DOMAIN ":" STR(API_PORT) API_PATH
+#define FIRMWARE_URL API_URL "/firmware"
 
 const uint8_t PIN_RELAY = 13;
 const uint8_t PIN_POWER = 14;
 
 const char *http_request_format =
   "GET %s HTTP/1.0\r\n"
-  "Host: %s:%s\r\n"
+  "Host: %s:%d\r\n"
   "Connection: close\r\n"
   "Authorization: %s\r\n"
+  "X-Version: %s\r\n"
   "\r\n";
 
 void setup() {
@@ -55,6 +56,7 @@ void setup() {
 
 void loop() {
   connectToWiFi(selectWifi());
+  setClock();
 
 #ifdef SECURED
   NetworkClientSecure client;
@@ -64,31 +66,17 @@ void loop() {
 #endif
   client.setTimeout(60000);
 
-  Serial.println("Checking for updates...");
-  switch (httpUpdate.update(client, FIRMWARE_URL, VERSION)) {
-    case HTTP_UPDATE_FAILED: Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str()); break;
-    case HTTP_UPDATE_NO_UPDATES: Serial.println("Already up to date."); break;`
-    case HTTP_UPDATE_OK: Serial.println("Updated !"); break;
-  }
-
   while (WiFi.status() == WL_CONNECTED) {
-    setClock();
-
-
+    Serial.printf("\r\nConnecting to API: %s:%d\r\n", API_DOMAIN, API_PORT);
     if (!client.connect(API_DOMAIN, API_PORT)) {
       Serial.println("Connection failed! Retrying in 1s.");
       delay(5 * 1000);
       continue;
     }
 
-    char url[512];
-    sprintf(url, "%s://%s:%d%s", PROTOCOL, API_DOMAIN, API_PORT, API_PATH);
-
-    Serial.printf("\r\nWaiting for open request: %s\r\n", url);
-    Serial.printf(http_request_format, url, API_DOMAIN, API_PORT, API_SECRET_KEY);
-    client.printf(
-      http_request_format,
-      url, API_DOMAIN, API_PORT, API_SECRET_KEY);
+    Serial.printf("Waiting for open request: %s\r\n", API_URL);
+    Serial.printf(http_request_format, API_URL, API_DOMAIN, API_PORT, API_SECRET_KEY, VERSION);
+    client.printf(http_request_format, API_URL, API_DOMAIN, API_PORT, API_SECRET_KEY, VERSION);
 
     int status = 0;
     while (client.connected()) {
@@ -103,18 +91,31 @@ void loop() {
 
     if (status == 200) {
       Serial.println("Opening the gate");
-      digitalWrite(PIN_POWER, HIGH);
+      setRemotePower(HIGH);
       delay(500);
       for (int i = 3; i != 0; i--) {
-        digitalWrite(PIN_RELAY, HIGH);
+        setRemoteButton(HIGH);
         delay(500);
-        digitalWrite(PIN_RELAY, LOW);
+        setRemoteButton(LOW);
         delay(750);
       }
-      digitalWrite(PIN_POWER, LOW);
-      Serial.println("Gate should be open");
+      setRemotePower(LOW);
+      Serial.println("Gate should be opening.");
     } else if (status == 408) {
       Serial.println("Timeout, reconecting.");
+    } else if (status == 426) {
+      Serial.println("Upgrade needed.");
+        Serial.printf("Checking for updates (from %s) ...\n", FIRMWARE_URL);
+        httpUpdate.rebootOnUpdate(false);
+        switch (httpUpdate.update(client, FIRMWARE_URL, VERSION)) {
+          case HTTP_UPDATE_FAILED: Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\r\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str()); break;
+          case HTTP_UPDATE_NO_UPDATES: Serial.printf("Already up to date: %s\r\n", VERSION); break;
+          case HTTP_UPDATE_OK: {
+            Serial.println("Updated !\r\n"); break;
+            Serial.flush();
+            ESP.restart();
+          }
+        }
     } else {
       Serial.printf("Unexpected status: %d\r\n", status);
       Serial.println("HTTP response body:");
@@ -130,6 +131,21 @@ void loop() {
 
     client.stop();
   }
+}
+
+void setRemotePower(u_int8_t val) {
+  setDigitalState("Remote power", PIN_POWER, val);
+}
+
+void setRemoteButton(uint8_t val) {
+  setDigitalState("Remote button", PIN_RELAY, val);
+}
+
+void setDigitalState(const char* name, u_int8_t pin, u_int8_t val) {
+  digitalWrite(pin, val);
+  Serial.printf("%s changed: ", name);
+  if (val == HIGH) Serial.write("ON\n");
+  else Serial.write("OFF\n");
 }
 
 void connectToWiFi(int wifi_id) {
@@ -211,18 +227,16 @@ int findWifiId(String ssid) {
 void setClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");  // UTC
 
-  Serial.print(F("Waiting for NTP time sync: "));
+  Serial.write("\nWaiting for NTP time sync...");
   time_t now = time(nullptr);
   while (now < 8 * 3600 * 2) {
     yield();
     delay(500);
-    Serial.print(F("."));
+    Serial.write(".");
     now = time(nullptr);
   }
 
-  Serial.println(F(""));
   struct tm timeinfo;
   gmtime_r(&now, &timeinfo);
-  Serial.print(F("Current time: "));
-  Serial.print(asctime(&timeinfo));
+  Serial.printf("\nCurrent time: %s\n", asctime(&timeinfo));
 }
