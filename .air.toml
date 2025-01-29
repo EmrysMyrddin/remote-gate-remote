@@ -10,7 +10,7 @@ app_port = 80
 pre_cmd = [
   "cd cmd/services/db && sqlc generate",
   "TEMPL_EXPERIMENT=rawgo templ generate",
-  "yarn build",
+  "yarn build:css",
 ]
 cmd = "go build -tags=viper_bind_struct -o ./tmp/main cmd/*.go"
 exclude_dir = ["tmp", "esp32", "node_modules", ".yarn", ".git", "static/css"]

@@ -6,9 +6,10 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build:prod": "yarn build --minify",
-    "watch": "yarn build --watch",
-    "build": "tailwindcss build -i views/main.css -o static/css/tailwind.css",
+    "build:css:prod": "yarn build:css --minify",
+    "watch:css": "yarn build:css --watch",
+    "build:css": "tailwindcss build -i views/main.css -o static/css/tailwind.css",
+    "build:esp": "cd esp32/gate && ./build.sh",
     "deploy": "caprover deploy -d"
   },
   "devDependencies": {
