@@ -41,7 +41,7 @@ func RegisterGateHandlers(e *echo.Echo, model *Model, openChannel chan struct{})
 			if !os.IsNotExist(err) {
 				logger.Log.Error().Err(err).Str("running version", model.RunningVersion).Msg("failed to get current firmware version, client will not be updated")
 			}
-		} else if currentVersion != model.RunningVersion {
+		} else if model.RunningVersion != "" && currentVersion != "none" && currentVersion != model.RunningVersion {
 			logger.Log.Info().Str("running version", model.RunningVersion).Str("current version", currentVersion).Msg("running version mismatch, instruct client to upgrade")
 			return c.NoContent(http.StatusUpgradeRequired)
 		}
