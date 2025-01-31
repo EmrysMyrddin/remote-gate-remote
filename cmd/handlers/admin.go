@@ -183,6 +183,24 @@ func RegisterAdminHandlers(e RequireAuth, gateModel *Model) {
 		return Render(c, 200, views.AdminUserForm(model))
 	})
 
+	adminGroup.GET("/registrations/:id/address_proof", func(c echo.Context) error {
+		userID, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			return c.String(400, "missing id param")
+		}
+
+		userAddressProofDir := addressProofDir(userID)
+		entries, err := os.ReadDir(userAddressProofDir)
+		if os.IsNotExist(err) || len(entries) == 0 {
+			return c.NoContent(404)
+		} else if err != nil {
+			logger.Log.Err(err).Stringer("user id", userID).Str("dir", userAddressProofDir).Msg("failed to list user address proof files")
+			return c.NoContent(500)
+		}
+
+		return c.File(path.Join(userAddressProofDir, entries[0].Name()))
+	})
+
 	adminGroup.PUT("/registrations/:id/:action", func(c echo.Context) error {
 		model := &views.AdminUserRowModel{}
 
@@ -208,6 +226,13 @@ func RegisterAdminHandlers(e RequireAuth, gateModel *Model) {
 				return Render(c, 422, views.AdminPendingRow(model))
 			}
 
+			if err := os.RemoveAll(addressProofDir(userID)); err != nil {
+				logger.Log.Err(err).Stringer("user", userID).Str("dir", addressProofDir(userID)).Msg("failed to clean up address proof")
+				model.Err = errors.New("échec de la suppression du justificatif de domicile")
+				return Render(c, 422, views.AdminPendingRow(model))
+			}
+			logger.Log.Info().Stringer("user", userID).Msg("Successfully cleaned up address proof")
+
 			if err := db.Commit(c); err != nil {
 				model.Err = errors.New("échec de l'enregistrement")
 				logger.Log.Error().Err(err).Msg("Failed to commit transaction")
@@ -227,6 +252,13 @@ func RegisterAdminHandlers(e RequireAuth, gateModel *Model) {
 				model.Err = errors.New("échec de l'envoi de l'e-mail")
 				return Render(c, 422, views.AdminPendingRow(model))
 			}
+
+			if err := os.RemoveAll(addressProofDir(userID)); err != nil {
+				logger.Log.Err(err).Stringer("user", userID).Str("dir", addressProofDir(userID)).Msg("failed to clean up address proof")
+				model.Err = errors.New("échec de la suppression du justificatif de domicile")
+				return Render(c, 422, views.AdminPendingRow(model))
+			}
+			logger.Log.Info().Stringer("user", userID).Msg("Successfully cleaned up address proof")
 
 			if err := db.Commit(c); err != nil {
 				model.Err = errors.New("échec de l'enregistrement")
@@ -396,4 +428,8 @@ func sendRegistrationRejectedMail(c echo.Context, user db.User) error {
 	}
 
 	return nil
+}
+
+func addressProofDir(userID uuid.UUID) string {
+	return path.Join(config.Config.Users.AddressProofsDirectory, userID.String())
 }

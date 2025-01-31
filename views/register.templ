@@ -28,7 +28,7 @@ templ RegisterPage(code string) {
 }
 
 templ RegisterForm(model c.FormModel) {
-	@c.Form("Inscription", model, "POST") {
+	@c.Form("Inscription", model, "POST", templ.Attributes{"hx-encoding": "multipart/form-data"}) {
 		@c.Field(c.FieldModel{FormModel: model,
 			Label: "Email", Name: "Email", Required: true, Type: "email", Attrs: templ.Attributes{"autocomplete": "email"},
 		})
@@ -47,6 +47,20 @@ templ RegisterForm(model c.FormModel) {
 		})
 		@c.Field(c.FieldModel{FormModel: model,
 			Label: "Numéro d'appartement (ex: A001)", Name: "Apartment", Required: true, Attrs: templ.Attributes{"maxlength": "4", "minlength": "3", "autocapitalize": "characters"},
+		})
+		<hr class="m-4"/>
+		<p class="my-2">
+			Afin d'assurer la sécurité de la co-propriété, nous devons nous assurer que vous êtes bien rédient.
+			<br/>
+			Pour cela, veuillez fournir un justificatif de dommicile (une facture à votre nom par exemple).
+		</p>
+		<small class="mb-2 italic text-gray-400 text-xs">
+			Ce document sera unique à disposition du conseil syndical, ou des administrateurs
+			désigné par celui-ci.
+			Il sera automatiquement supprimé dés votre demande d'inscription traitée.
+		</small>
+		@c.Field(c.FieldModel{FormModel: model,
+			Label: "Justificatif de dommicile", Name: "AddressProofFile", Required: true, Type: "file",
 		})
 		@c.Button(templ.Attributes{"type": "submit"}) {
 			S'inscrire

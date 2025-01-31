@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"regexp"
 	"time"
 	"woody-wood-portail/cmd/config"
@@ -93,6 +96,12 @@ func RegisterAuthHandlers(e *echo.Echo) {
 
 		model := components.NewFormModel(rawValues, Validate(c, values))
 
+		addressProofFile, err := c.FormFile("AddressProofFile")
+		if err != nil {
+			logger.Log.Err(err).Msg("failed to get address proof file from form")
+			model.Errors.Fields["AddressProofFile"] = "Le justificatif de domicile est obligatoire"
+		}
+
 		if len(model.Errors.Fields) > 0 {
 			logger.Log.Info().Any("errors", model.Errors).Msg("Invalid form")
 			return Render(c, 422, views.RegisterForm(model))
@@ -115,6 +124,39 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("Unable to create user")
 			model.Errors.Global = "Erreur inatendue"
+			return Render(c, 422, views.RegisterForm(model))
+		}
+
+		userAddressProofSrc, err := addressProofFile.Open()
+		if err != nil {
+			logger.Log.Error().Err(err).Msg("Failed to upload user address proofs dir")
+			model.Errors.Global = "Erreur inatendue durant l'upload du document"
+			return Render(c, 422, views.RegisterForm(model))
+		}
+		defer userAddressProofSrc.Close()
+
+		userAddressProofsDir := addressProofDir(newUser.ID)
+		if err := os.MkdirAll(userAddressProofsDir, 0755); err != nil {
+			logger.Log.Error().Err(err).Str("path", userAddressProofsDir).Msg("Failed to create user address proofs dir")
+			model.Errors.Global = "Erreur inatendue durant l'upload du document"
+			return Render(c, 422, views.RegisterForm(model))
+		}
+
+		userAddressProofPath := path.Join(userAddressProofsDir, addressProofFile.Filename)
+		userAddressProofsDst, err := os.Create(userAddressProofPath)
+		if err != nil {
+			logger.Log.Error().Err(err).Str("path", userAddressProofPath).Msg("Failed to create user address proofs file")
+			model.Errors.Global = "Erreur inatendue durant l'upload du document"
+			return Render(c, 422, views.RegisterForm(model))
+		}
+		defer userAddressProofsDst.Close()
+
+		if _, err := io.Copy(userAddressProofsDst, userAddressProofSrc); err != nil {
+			logger.Log.Error().Err(err).Str("path", userAddressProofPath).Msg("Failed to copy proofs file")
+			model.Errors.Global = "Erreur inatendue durant l'upload du document"
+			if err:= os.RemoveAll(userAddressProofsDir); err != nil {
+				logger.Log.Err(err).Str("dir", userAddressProofsDir).Msg("failed to clean up user address proof dir")
+			}
 			return Render(c, 422, views.RegisterForm(model))
 		}
 

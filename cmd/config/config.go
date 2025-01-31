@@ -25,8 +25,9 @@ type config struct {
 	}
 
 	Users struct {
-		RenewalInterval string `mapstructure:"renewal_interval"`
-		ReminderDays    string `mapstructure:"reminder_days"`
+		RenewalInterval        string `mapstructure:"renewal_interval"`
+		ReminderDays           string `mapstructure:"reminder_days"`
+		AddressProofsDirectory string `mapstructure:"address_proof_directory"`
 	}
 
 	Gate struct {
@@ -64,6 +65,7 @@ func init() {
 
 	Config.Users.ReminderDays = "7, 3, 1"
 	Config.Users.RenewalInterval = "2 months"
+	Config.Users.AddressProofsDirectory = "/usr/src/app/address_proofs"
 
 	v := viper.New()
 	v.AutomaticEnv()

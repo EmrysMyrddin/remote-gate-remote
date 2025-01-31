@@ -180,6 +180,16 @@ func RegisterForm(model c.FormModel) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" <hr class=\"m-4\"><p class=\"my-2\">Afin d'assurer la sécurité de la co-propriété, nous devons nous assurer que vous êtes bien rédient.<br>Pour cela, veuillez fournir un justificatif de dommicile (une facture à votre nom par exemple).</p><small class=\"mb-2 italic text-gray-400 text-xs\">Ce document sera unique à disposition du conseil syndical, ou des administrateurs désigné par celui-ci. Il sera automatiquement supprimé dés votre demande d'inscription traitée.</small>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = c.Field(c.FieldModel{FormModel: model,
+				Label: "Justificatif de dommicile", Name: "AddressProofFile", Required: true, Type: "file",
+			}).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -212,7 +222,7 @@ func RegisterForm(model c.FormModel) templ.Component {
 			}
 			return templ_7745c5c3_Err
 		})
-		templ_7745c5c3_Err = c.Form("Inscription", model, "POST").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = c.Form("Inscription", model, "POST", templ.Attributes{"hx-encoding": "multipart/form-data"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
