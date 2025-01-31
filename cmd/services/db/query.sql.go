@@ -240,7 +240,7 @@ func (q *Queries) ListLogs(ctx context.Context) ([]Log, error) {
 }
 
 const listLogsByUser = `-- name: ListLogsByUser :many
-select id, user_id, created_at from "logs" where user_id = $1
+select id, user_id, created_at from "logs" where user_id = $1 order by created_at desc
 `
 
 func (q *Queries) ListLogsByUser(ctx context.Context, userID uuid.UUID) ([]Log, error) {

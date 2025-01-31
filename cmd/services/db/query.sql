@@ -56,7 +56,7 @@ insert into "logs" (user_id) values ($1) returning *;
 select * from "logs";
 
 -- name: ListLogsByUser :many
-select * from "logs" where user_id = $1;
+select * from "logs" where user_id = $1 order by created_at desc;
 
 -- name: DeleteOldLogs :execrows
 delete from "logs" where created_at < now() - interval '1 year';
