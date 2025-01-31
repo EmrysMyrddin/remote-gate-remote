@@ -176,7 +176,7 @@ templ AdminPendingRow(model *AdminUserRowModel) {
 				{ model.User.Apartment } : { model.User.FullName }
 			</div>
 			<div class="flex gap-2">
-				<a href={templ.SafeURL("/admin/registrations/"+model.User.ID.String()+"/address_proof")} target="_blank">📄</a>
+				<a href={templ.SafeURL("/admin/registrations/"+model.User.ID.String()+"/address_proof")} target="_blank" title="Justificatif de domicile">📄</a>
 				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/accept" } title="Accepter">✅</button>
 				<button hx-put={ "/admin/registrations/" + model.User.ID.String() + "/reject" } title="Refuser">❌</button>
 			</div>
