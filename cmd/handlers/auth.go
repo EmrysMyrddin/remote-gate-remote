@@ -154,7 +154,7 @@ func RegisterAuthHandlers(e *echo.Echo) {
 		if _, err := io.Copy(userAddressProofsDst, userAddressProofSrc); err != nil {
 			logger.Log.Error().Err(err).Str("path", userAddressProofPath).Msg("Failed to copy proofs file")
 			model.Errors.Global = "Erreur inatendue durant l'upload du document"
-			if err:= os.RemoveAll(userAddressProofsDir); err != nil {
+			if err := os.RemoveAll(userAddressProofsDir); err != nil {
 				logger.Log.Err(err).Str("dir", userAddressProofsDir).Msg("failed to clean up user address proof dir")
 			}
 			return Render(c, 422, views.RegisterForm(model))
