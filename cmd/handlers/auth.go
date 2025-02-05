@@ -596,7 +596,7 @@ func init() {
 		},
 	}
 
-	apartmentRegex := regexp.MustCompile(`^[AB][0-4][0-1][0-9]$`)
+	apartmentRegex := regexp.MustCompile(`^(A[0-4]|B[0-5])[0-1][0-9]$`)
 	customValidations["apartment"] = CustomValidation{
 		Message: "Numéro d'appartement incorrect. (ex: A001)",
 		Validate: func(fl validator.FieldLevel) bool {
